@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lens Equation Atlas</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="panel hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Interactive optics playground</p>
+          <h1>Lens Equation Atlas</h1>
+          <p class="hero-text">
+            Explore how focal length, subject distance, aperture, and circle of
+            confusion push against each other. The page uses a thin-lens model,
+            then turns the math into live charts for image distance,
+            magnification, blur diameter, and depth of field.
+          </p>
+        </div>
+
+        <div class="formula-strip" aria-label="Core formulas">
+          <div class="formula-card">
+            <span>Thin lens</span>
+            <strong>1/f = 1/s + 1/s'</strong>
+          </div>
+          <div class="formula-card">
+            <span>Magnification</span>
+            <strong>m = -s'/s</strong>
+          </div>
+          <div class="formula-card">
+            <span>Defocus blur</span>
+            <strong>c(z) = D |v(z) - v<sub>f</sub>| / v(z)</strong>
+          </div>
+        </div>
+
+        <div class="preset-row" aria-label="Preset camera setups">
+          <button class="preset-chip" data-preset="portrait" type="button">
+            Portrait 85/2
+          </button>
+          <button class="preset-chip" data-preset="macro" type="button">
+            Close-up 100/4
+          </button>
+          <button class="preset-chip" data-preset="landscape" type="button">
+            Landscape 24/11
+          </button>
+          <button class="preset-chip" data-preset="sports" type="button">
+            Sports 200/2.8
+          </button>
+          <button class="preset-chip" data-preset="phone" type="button">
+            Phone 6/1.8
+          </button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="panel control-panel">
+          <div class="panel-heading">
+            <h2>Inputs</h2>
+            <p>
+              Distances are measured from the lens plane. Focus and probe
+              sliders use logarithmic spacing so small close-focus changes stay
+              readable.
+            </p>
+          </div>
+
+          <div class="control">
+            <div class="control-top">
+              <label for="focalLengthRange">Focal length f</label>
+              <output id="focalLengthDisplay">85 mm</output>
+            </div>
+            <div class="control-inputs">
+              <input
+                id="focalLengthRange"
+                type="range"
+                min="10"
+                max="300"
+                step="1"
+                value="85"
+              />
+              <input
+                id="focalLengthNumber"
+                type="number"
+                min="10"
+                max="300"
+                step="1"
+                value="85"
+              />
+            </div>
+          </div>
+
+          <div class="control">
+            <div class="control-top">
+              <label for="focusDistanceRange">Focus distance s</label>
+              <output id="focusDistanceDisplay">2.00 m</output>
+            </div>
+            <div class="control-inputs">
+              <input
+                id="focusDistanceRange"
+                type="range"
+                min="0"
+                max="1000"
+                step="1"
+                value="0"
+              />
+              <input
+                id="focusDistanceNumber"
+                type="number"
+                min="0.20"
+                max="100"
+                step="0.01"
+                value="2.00"
+              />
+            </div>
+          </div>
+
+          <div class="control">
+            <div class="control-top">
+              <label for="fNumberRange">F-number N</label>
+              <output id="fNumberDisplay">f/2.0</output>
+            </div>
+            <div class="control-inputs">
+              <input
+                id="fNumberRange"
+                type="range"
+                min="1.2"
+                max="22"
+                step="0.1"
+                value="2.0"
+              />
+              <input
+                id="fNumberNumber"
+                type="number"
+                min="1.2"
+                max="22"
+                step="0.1"
+                value="2.0"
+              />
+            </div>
+          </div>
+
+          <div class="control">
+            <div class="control-top">
+              <label for="cocRange">Circle of confusion</label>
+              <output id="cocDisplay">0.030 mm</output>
+            </div>
+            <div class="control-inputs">
+              <input
+                id="cocRange"
+                type="range"
+                min="0.005"
+                max="0.060"
+                step="0.001"
+                value="0.030"
+              />
+              <input
+                id="cocNumber"
+                type="number"
+                min="0.005"
+                max="0.060"
+                step="0.001"
+                value="0.030"
+              />
+            </div>
+          </div>
+
+          <div class="control">
+            <div class="control-top">
+              <label for="probeDistanceRange">Probe subject distance z</label>
+              <output id="probeDistanceDisplay">3.00 m</output>
+            </div>
+            <div class="control-inputs">
+              <input
+                id="probeDistanceRange"
+                type="range"
+                min="0"
+                max="1000"
+                step="1"
+                value="0"
+              />
+              <input
+                id="probeDistanceNumber"
+                type="number"
+                min="0.20"
+                max="100"
+                step="0.01"
+                value="3.00"
+              />
+            </div>
+          </div>
+
+          <div class="legend-card">
+            <h3>Reading the plots</h3>
+            <p>
+              The image-distance and magnification charts sweep subject
+              distance. The blur chart centers on the current focus setting,
+              marks the probe subject, and shades the region that stays inside
+              the selected circle of confusion.
+            </p>
+          </div>
+        </aside>
+
+        <section class="main-column">
+          <section class="metrics-grid" aria-label="Derived values">
+            <article class="metric-card accent">
+              <span class="metric-label">Image distance s'</span>
+              <strong class="metric-value" id="imageDistanceValue">88.75 mm</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Magnification m</span>
+              <strong class="metric-value" id="magnificationValue">-0.044x</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Aperture diameter D</span>
+              <strong class="metric-value" id="apertureValue">42.50 mm</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Probe blur c(z)</span>
+              <strong class="metric-value" id="probeBlurValue">0.403 mm</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Near DOF</span>
+              <strong class="metric-value" id="nearDofValue">1.96 m</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Far DOF</span>
+              <strong class="metric-value" id="farDofValue">2.04 m</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Total DOF</span>
+              <strong class="metric-value" id="totalDofValue">0.08 m</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Hyperfocal H</span>
+              <strong class="metric-value" id="hyperfocalValue">120.50 m</strong>
+            </article>
+          </section>
+
+          <section class="panel summary-card">
+            <div class="panel-heading">
+              <h2>Current setup</h2>
+              <p id="summaryText">
+                At this focus setting, the sensor wants to sit just behind the
+                lens while the blur chart shows how quickly defocus grows away
+                from the selected subject plane.
+              </p>
+            </div>
+          </section>
+
+          <section class="charts-grid">
+            <article class="panel chart-card">
+              <div class="chart-heading">
+                <h3>Image distance vs. subject distance</h3>
+                <p>
+                  As the subject moves toward the focal length, the image plane
+                  must move rapidly away from the lens to keep focus.
+                </p>
+              </div>
+              <canvas id="imageChart" aria-label="Image distance chart"></canvas>
+            </article>
+
+            <article class="panel chart-card">
+              <div class="chart-heading">
+                <h3>Magnification vs. subject distance</h3>
+                <p>
+                  The plotted value is magnitude only; the actual magnification
+                  is negative because the thin-lens image is inverted.
+                </p>
+              </div>
+              <canvas
+                id="magnificationChart"
+                aria-label="Magnification chart"
+              ></canvas>
+            </article>
+
+            <article class="panel chart-card wide">
+              <div class="chart-heading">
+                <h3>Blur diameter and depth of field</h3>
+                <p>
+                  The horizontal line is the selected circle of confusion. The
+                  shaded band shows subject distances that stay at or below that
+                  blur criterion.
+                </p>
+              </div>
+              <canvas id="blurChart" aria-label="Blur diameter chart"></canvas>
+            </article>
+          </section>
+        </section>
+      </main>
+
+      <footer class="page-note">
+        Thin-lens models are useful for intuition, but real lenses can deviate
+        because of principal-plane offsets, focus breathing, pupil magnification,
+        and lens aberrations.
+      </footer>
+    </div>
+
+    <noscript>
+      <div class="noscript-banner">
+        JavaScript is required for the interactive equations and graphs.
+      </div>
+    </noscript>
+
+    <script src="app.js"></script>
+  </body>
+</html>

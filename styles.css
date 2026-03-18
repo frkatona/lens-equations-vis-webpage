@@ -1,0 +1,452 @@
+:root {
+  --bg: #f5efe2;
+  --panel: rgba(255, 251, 245, 0.78);
+  --panel-strong: rgba(255, 250, 242, 0.94);
+  --line: rgba(27, 42, 50, 0.1);
+  --line-strong: rgba(27, 42, 50, 0.2);
+  --ink: #1b2a32;
+  --muted: #56646b;
+  --teal: #1b7176;
+  --amber: #c26a2c;
+  --sand: #e7d6b8;
+  --shadow: 0 24px 60px rgba(41, 32, 17, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: "Avenir Next", "Trebuchet MS", "Gill Sans", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(194, 106, 44, 0.18), transparent 28%),
+    radial-gradient(circle at 85% 15%, rgba(27, 113, 118, 0.18), transparent 26%),
+    linear-gradient(180deg, #fbf6ed 0%, #f2ead9 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.28) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.24) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at center, black 30%, transparent 100%);
+  opacity: 0.25;
+}
+
+.page-shell {
+  width: min(1320px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 1.5rem 0 3rem;
+}
+
+.panel {
+  position: relative;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), transparent 42%);
+}
+
+.hero,
+.control-panel,
+.summary-card,
+.chart-card,
+.metric-card {
+  animation: rise 700ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+.hero {
+  padding: 2rem;
+}
+
+.hero-copy {
+  max-width: 760px;
+}
+
+.eyebrow {
+  margin: 0 0 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.77rem;
+  font-weight: 700;
+  color: var(--teal);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: clamp(2.8rem, 5vw, 4.6rem);
+  line-height: 0.96;
+  max-width: 10ch;
+}
+
+h2 {
+  font-size: 1.7rem;
+  line-height: 1.05;
+}
+
+h3 {
+  font-size: 1.3rem;
+}
+
+.hero-text,
+.panel-heading p,
+.chart-heading p,
+.legend-card p,
+.page-note {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.hero-text {
+  max-width: 70ch;
+  margin: 1rem 0 0;
+  font-size: 1.04rem;
+}
+
+.formula-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-top: 1.5rem;
+}
+
+.formula-card {
+  padding: 1rem 1.15rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(27, 42, 50, 0.08);
+}
+
+.formula-card span {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.formula-card strong {
+  font-size: 1.1rem;
+}
+
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 1.35rem;
+}
+
+.preset-chip {
+  position: relative;
+  z-index: 1;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.8rem 1rem;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(231, 214, 184, 0.95));
+  box-shadow: inset 0 0 0 1px rgba(27, 42, 50, 0.08);
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.preset-chip:hover,
+.preset-chip:focus-visible {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 0 1px rgba(27, 42, 50, 0.14),
+    0 14px 26px rgba(27, 42, 50, 0.12);
+}
+
+.preset-chip.is-active {
+  color: #fff8ef;
+  background: linear-gradient(135deg, var(--teal), #15575b);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 16px 30px rgba(27, 113, 118, 0.18);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 1.2rem;
+  margin-top: 1.2rem;
+  align-items: start;
+}
+
+.control-panel {
+  padding: 1.4rem;
+  position: sticky;
+  top: 1rem;
+}
+
+.panel-heading {
+  position: relative;
+  z-index: 1;
+}
+
+.panel-heading p {
+  margin: 0.6rem 0 0;
+}
+
+.control {
+  position: relative;
+  z-index: 1;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(27, 42, 50, 0.08);
+}
+
+.control-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.control-top label {
+  font-weight: 700;
+}
+
+.control-top output {
+  font-variant-numeric: tabular-nums;
+  color: var(--teal);
+  font-weight: 700;
+}
+
+.control-inputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  gap: 0.8rem;
+  margin-top: 0.75rem;
+  align-items: center;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--amber);
+}
+
+input[type="number"] {
+  width: 100%;
+  border: 1px solid rgba(27, 42, 50, 0.16);
+  border-radius: 14px;
+  padding: 0.7rem 0.75rem;
+  font: inherit;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.legend-card {
+  position: relative;
+  z-index: 1;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(27, 113, 118, 0.12), transparent 60%),
+    rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(27, 42, 50, 0.08);
+}
+
+.legend-card h3 {
+  font-size: 1rem;
+}
+
+.legend-card p {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+}
+
+.main-column {
+  min-width: 0;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.metric-card {
+  padding: 1rem 1.05rem;
+  border-radius: 22px;
+  background: var(--panel-strong);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+.metric-card.accent {
+  background:
+    linear-gradient(135deg, rgba(194, 106, 44, 0.17), transparent 72%),
+    var(--panel-strong);
+}
+
+.metric-label {
+  display: block;
+  font-size: 0.83rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.metric-value {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-card {
+  margin-top: 1rem;
+  padding: 1.2rem 1.35rem;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.chart-card {
+  padding: 1rem 1rem 0.9rem;
+}
+
+.chart-card.wide {
+  grid-column: 1 / -1;
+}
+
+.chart-heading {
+  position: relative;
+  z-index: 1;
+}
+
+.chart-heading p {
+  margin: 0.45rem 0 0;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 280px;
+  margin-top: 0.9rem;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(250, 244, 235, 0.68));
+}
+
+.chart-card.wide canvas {
+  height: 320px;
+}
+
+.page-note {
+  margin-top: 1.1rem;
+  padding: 0.2rem 0.2rem 0;
+  font-size: 0.95rem;
+}
+
+.noscript-banner {
+  margin: 1rem auto 2rem;
+  width: min(1320px, calc(100% - 2rem));
+  padding: 1rem;
+  border-radius: 18px;
+  background: #fff2d5;
+  color: #5a3d12;
+  border: 1px solid rgba(90, 61, 18, 0.16);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1100px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .control-panel {
+    position: relative;
+    top: 0;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .page-shell {
+    width: min(100% - 1rem, 1320px);
+    padding-top: 0.75rem;
+  }
+
+  .hero,
+  .control-panel,
+  .summary-card,
+  .chart-card {
+    border-radius: 24px;
+  }
+
+  .hero {
+    padding: 1.4rem;
+  }
+
+  .formula-strip,
+  .charts-grid,
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .control-inputs {
+    grid-template-columns: 1fr;
+  }
+
+  canvas,
+  .chart-card.wide canvas {
+    height: 260px;
+  }
+}
