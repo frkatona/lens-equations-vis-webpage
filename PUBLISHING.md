@@ -1,36 +1,32 @@
-## User Pages Subpage Publishing
+## GitHub Pages Publishing
 
-This repo includes a workflow that can publish the app into a subfolder of the account's existing `username.github.io` repository.
+This repository can publish itself directly as a GitHub Pages project site.
 
-### What it does
+That means it stays fully separate from your `username.github.io` repository.
+You do not need to copy files into your user Pages repo, sync between repos, or grant this repo write access to that other repo.
 
-- On push to `main` or `master`, `.github/workflows/publish-to-user-pages.yml` clones `${owner}.github.io`.
-- It copies the files listed in `pages-subpage.manifest` into a subfolder.
-- By default, that subfolder is this repository's name, so the resulting URL is usually:
-  `https://<owner>.github.io/<this-repo-name>/`
+If this repository is named `lens-equations`, the Pages URL will be:
+
+`https://<your-account>.github.io/lens-equations/`
 
 ### One-time setup
 
-1. Create a fine-grained personal access token that can read and write `Contents` on your `username.github.io` repository.
-2. Add that token to this repository as a secret named `PAGES_PUBLISH_TOKEN`.
-3. Make sure the `username.github.io` repository itself is already configured to serve GitHub Pages from its default publishing source.
+1. Push this repository to GitHub.
+2. In this repository on GitHub, open `Settings` -> `Pages`.
+3. Set the source to `GitHub Actions`.
+4. Push to `main` or `master`, or run the `Deploy GitHub Pages` workflow manually.
 
-### Optional repository variables
+### What gets published
 
-- `PAGES_SUBPAGE`
-  Use this if you want a custom subfolder name instead of this repository's name.
-
-- `PAGES_TARGET_ROOT`
-  Use this only if your Pages repository publishes from a subdirectory such as `docs`.
-  Leave it unset to publish into the root of `username.github.io`.
-
-### Published file list
-
-The workflow publishes the paths listed in `pages-subpage.manifest`.
-Right now that list is:
+The workflow publishes:
 
 - `index.html`
 - `styles.css`
 - `app.js`
+- `assets/` if that folder exists
 
-If you add assets later, add them to the manifest too.
+### Notes
+
+- This is a GitHub Pages project site, not a user site.
+- Per GitHub’s Pages docs, project sites are served from the project repository and use the `/<repository>/` path on your `github.io` domain.
+- The current app already uses relative asset paths, so it works correctly from a subpath.

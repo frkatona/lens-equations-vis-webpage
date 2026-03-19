@@ -7,48 +7,169 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="page-shell">
-      <header class="panel hero">
-        <div class="hero-top">
-          <div class="hero-copy">
-            <p class="eyebrow">Interactive optics playground</p>
-            <h1>Lens Equation Atlas</h1>
+    <div class="display-controls">
+      <button
+        class="menu-button"
+        id="displayMenuToggle"
+        type="button"
+        aria-label="Open display options"
+        aria-expanded="false"
+        aria-controls="displayDrawer"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      <div class="menu-scrim" id="displayScrim"></div>
+
+      <aside
+        class="panel display-drawer"
+        id="displayDrawer"
+        aria-hidden="true"
+        aria-label="Display options"
+      >
+        <div class="drawer-head">
+          <div>
+            <p class="eyebrow">Display options</p>
+            <h3>Appearance</h3>
           </div>
-          <p class="hero-brief">
-            Slide the camera variables and watch the bars, zoom sketch, and
-            graphs update immediately.
-          </p>
-        </div>
-
-        <div class="preset-row" aria-label="Preset camera setups">
-          <button class="preset-chip" data-preset="portrait" type="button">
-            Portrait 85/2
-          </button>
-          <button class="preset-chip" data-preset="macro" type="button">
-            Close-up 100/4
-          </button>
-          <button class="preset-chip" data-preset="landscape" type="button">
-            Landscape 24/11
-          </button>
-          <button class="preset-chip" data-preset="sports" type="button">
-            Sports 200/2.8
-          </button>
-          <button class="preset-chip" data-preset="phone" type="button">
-            Phone 6/1.8
+          <button class="drawer-close" id="displayMenuClose" type="button">
+            Close
           </button>
         </div>
 
-        <p class="status-line" id="summaryText">
-          85 mm | focus 2.00 m | sensor 88.8 mm | probe blur 0.629 mm
-        </p>
-      </header>
+        <div class="drawer-group">
+          <span class="drawer-label">Theme</span>
+          <div class="theme-grid" role="group" aria-label="Theme presets">
+            <button class="theme-chip" data-theme-option="sand" type="button">
+              <span class="theme-swatch sand"></span>
+              Sand
+            </button>
+            <button class="theme-chip" data-theme-option="slate" type="button">
+              <span class="theme-swatch slate"></span>
+              Slate
+            </button>
+            <button class="theme-chip" data-theme-option="forest" type="button">
+              <span class="theme-swatch forest"></span>
+              Forest
+            </button>
+          </div>
+        </div>
 
+        <div class="drawer-group">
+          <div class="drawer-row">
+            <label class="drawer-label" for="transparencyRange">
+              Window transparency
+            </label>
+            <output id="transparencyDisplay">20%</output>
+          </div>
+          <input
+            id="transparencyRange"
+            type="range"
+            min="0"
+            max="60"
+            step="1"
+            value="20"
+          />
+        </div>
+
+        <div class="drawer-group">
+          <div class="drawer-row">
+            <label class="drawer-label" for="contentWidthRange">
+              Content width
+            </label>
+            <output id="contentWidthDisplay">1320 px</output>
+          </div>
+          <input
+            id="contentWidthRange"
+            type="range"
+            min="960"
+            max="1600"
+            step="20"
+            value="1320"
+          />
+        </div>
+
+        <div class="drawer-group">
+          <div class="drawer-row">
+            <label class="drawer-label" for="blurStrengthRange">
+              Glass blur
+            </label>
+            <output id="blurStrengthDisplay">18 px</output>
+          </div>
+          <input
+            id="blurStrengthRange"
+            type="range"
+            min="0"
+            max="28"
+            step="1"
+            value="18"
+          />
+        </div>
+
+        <div class="drawer-group">
+          <div class="drawer-row">
+            <label class="drawer-label" for="radiusRange">
+              Corner radius
+            </label>
+            <output id="radiusDisplay">26 px</output>
+          </div>
+          <input
+            id="radiusRange"
+            type="range"
+            min="18"
+            max="34"
+            step="1"
+            value="26"
+          />
+        </div>
+
+        <button class="reset-display" id="resetDisplayButton" type="button">
+          Reset display settings
+        </button>
+      </aside>
+    </div>
+
+    <div class="page-shell">
       <main class="workspace">
         <section class="panel controls-panel">
-          <div class="section-head">
-            <h2>Inputs</h2>
-            <p>Thin-lens sketch. Distances are measured from the lens plane.</p>
+          <div class="controls-intro">
+            <div class="controls-copy">
+              <p class="eyebrow">Interactive optics playground</p>
+              <h2>Inputs</h2>
+            </div>
+            <p class="controls-brief">
+              Slide the camera variables and watch the bars, zoom sketch, and
+              graphs update immediately.
+            </p>
           </div>
+
+          <div class="preset-row" aria-label="Preset camera setups">
+            <button class="preset-chip" data-preset="portrait" type="button">
+              Portrait 85/2
+            </button>
+            <button class="preset-chip" data-preset="macro" type="button">
+              Close-up 100/4
+            </button>
+            <button class="preset-chip" data-preset="landscape" type="button">
+              Landscape 24/11
+            </button>
+            <button class="preset-chip" data-preset="sports" type="button">
+              Sports 200/2.8
+            </button>
+            <button class="preset-chip" data-preset="phone" type="button">
+              Phone 6/1.8
+            </button>
+          </div>
+
+          <p class="status-line" id="summaryText">
+            85 mm | focus 2.00 m | sensor 88.8 mm | probe blur 0.629 mm
+          </p>
+
+          <p class="controls-note">
+            Thin-lens sketch. Distances are measured from the lens plane.
+          </p>
 
           <div class="controls-grid">
             <div class="control">

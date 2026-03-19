@@ -4,6 +4,16 @@ const BLUR_SAMPLE_COUNT = 260;
 const DISTANCE_MARGIN_METERS = 0.05;
 const DISTANCE_FLOOR_METERS = 0.18;
 const HYPERFOCAL_REFERENCE_MM = 250000;
+const PROBE_BLUR_MAX_COC_RATIO = 250;
+const DISPLAY_STORAGE_KEY = "lens-equations-display";
+const DISPLAY_THEMES = ["sand", "slate", "forest"];
+const DISPLAY_DEFAULTS = Object.freeze({
+  theme: "sand",
+  transparency: 20,
+  width: 1320,
+  blur: 18,
+  radius: 26,
+});
 
 const presets = {
   portrait: { focalLength: 85, focusDistance: 2, fNumber: 2, coc: 0.03, probeDistance: 3 },
@@ -14,8 +24,22 @@ const presets = {
 };
 
 const state = { ...presets.portrait };
+const displayState = { ...DISPLAY_DEFAULTS };
 
 const elements = {
+  displayMenuToggle: document.getElementById("displayMenuToggle"),
+  displayMenuClose: document.getElementById("displayMenuClose"),
+  displayScrim: document.getElementById("displayScrim"),
+  displayDrawer: document.getElementById("displayDrawer"),
+  transparencyRange: document.getElementById("transparencyRange"),
+  transparencyDisplay: document.getElementById("transparencyDisplay"),
+  contentWidthRange: document.getElementById("contentWidthRange"),
+  contentWidthDisplay: document.getElementById("contentWidthDisplay"),
+  blurStrengthRange: document.getElementById("blurStrengthRange"),
+  blurStrengthDisplay: document.getElementById("blurStrengthDisplay"),
+  radiusRange: document.getElementById("radiusRange"),
+  radiusDisplay: document.getElementById("radiusDisplay"),
+  resetDisplayButton: document.getElementById("resetDisplayButton"),
   focalLengthRange: document.getElementById("focalLengthRange"),
   focalLengthNumber: document.getElementById("focalLengthNumber"),
   focalLengthDisplay: document.getElementById("focalLengthDisplay"),
@@ -65,12 +89,41 @@ const elements = {
   zoomRayTop: document.getElementById("zoomRayTop"),
   zoomRayMid: document.getElementById("zoomRayMid"),
   zoomRayBottom: document.getElementById("zoomRayBottom"),
+  zoomLensDemo: document.getElementById("zoomLensDemo"),
   zoomScaleFill: document.getElementById("zoomScaleFill"),
   zoomScaleThumb: document.getElementById("zoomScaleThumb"),
   imageChart: document.getElementById("imageChart"),
   magnificationChart: document.getElementById("magnificationChart"),
   blurChart: document.getElementById("blurChart"),
   presetButtons: Array.from(document.querySelectorAll("[data-preset]")),
+  themeButtons: Array.from(document.querySelectorAll("[data-theme-option]")),
+};
+
+const helpTargets = {
+  themeGroup: document.querySelector(".theme-grid"),
+  transparencyGroup: elements.transparencyRange.closest(".drawer-group"),
+  contentWidthGroup: elements.contentWidthRange.closest(".drawer-group"),
+  blurGroup: elements.blurStrengthRange.closest(".drawer-group"),
+  radiusGroup: elements.radiusRange.closest(".drawer-group"),
+  focalLengthControl: elements.focalLengthRange.closest(".control"),
+  focusDistanceControl: elements.focusDistanceRange.closest(".control"),
+  fNumberControl: elements.fNumberRange.closest(".control"),
+  cocControl: elements.cocRange.closest(".control"),
+  probeDistanceControl: elements.probeDistanceRange.closest(".control"),
+  summaryText: elements.summaryText,
+  nearDofPill: elements.nearDofValue.closest(".quick-pill"),
+  farDofPill: elements.farDofValue.closest(".quick-pill"),
+  totalDofPill: elements.totalDofValue.closest(".quick-pill"),
+  imageDistanceBar: elements.imageDistanceBarValue.closest(".bar-column"),
+  magnificationBar: elements.magnificationBarValue.closest(".bar-column"),
+  apertureBar: elements.apertureBarValue.closest(".bar-column"),
+  probeBlurBar: elements.probeBlurBarValue.closest(".bar-column"),
+  totalDofBar: elements.totalDofBarValue.closest(".bar-column"),
+  hyperfocalBar: elements.hyperfocalBarValue.closest(".bar-column"),
+  zoomDemoCard: document.querySelector(".zoom-demo-card"),
+  imageChartCard: elements.imageChart.closest(".chart-card"),
+  magnificationChartCard: elements.magnificationChart.closest(".chart-card"),
+  blurChartCard: elements.blurChart.closest(".chart-card"),
 };
 
 function clamp(value, min, max) {
@@ -80,6 +133,52 @@ function clamp(value, min, max) {
 function safeNumber(value, fallback) {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function quantize(value, step = 1) {
+  return Math.round(value / step) * step;
+}
+
+function rgbaTuple(rgbTuple, alpha) {
+  return `rgba(${rgbTuple}, ${alpha})`;
+}
+
+function hexToRgba(hex, alpha = 1) {
+  const normalized = hex.trim().replace("#", "");
+  if (normalized.length !== 3 && normalized.length !== 6) {
+    return hex;
+  }
+  const expanded = normalized.length === 3 ? normalized.split("").map((char) => `${char}${char}`).join("") : normalized;
+  const r = Number.parseInt(expanded.slice(0, 2), 16);
+  const g = Number.parseInt(expanded.slice(2, 4), 16);
+  const b = Number.parseInt(expanded.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function readVisualPalette() {
+  const styles = getComputedStyle(document.body);
+  return {
+    ink: styles.getPropertyValue("--ink").trim() || "#1b2a32",
+    muted: styles.getPropertyValue("--muted").trim() || "#56646b",
+    teal: styles.getPropertyValue("--teal").trim() || "#1b7176",
+    amber: styles.getPropertyValue("--amber").trim() || "#c26a2c",
+    rust: styles.getPropertyValue("--rust").trim() || "#8c3f19",
+    panelRgb: styles.getPropertyValue("--panel-rgb").trim() || "255, 251, 245",
+    surfaceRgb: styles.getPropertyValue("--surface-rgb").trim() || "255, 255, 255",
+    track: styles.getPropertyValue("--track").trim() || "rgba(27, 42, 50, 0.09)",
+  };
+}
+
+function helpText(...lines) {
+  return lines.join("\n");
+}
+
+function setHelp(targets, text) {
+  const list = Array.isArray(targets) ? targets : [targets];
+  list.filter(Boolean).forEach((target) => {
+    target.classList.add("has-help");
+    target.setAttribute("title", text);
+  });
 }
 
 function distanceMinMeters() {
@@ -173,8 +272,19 @@ function formatFNumber(value) {
   return `f/${value.toFixed(1)}`;
 }
 
+function formatPixels(value) {
+  return `${value.toFixed(0)} px`;
+}
+
 function formatRatioMagnitude(value) {
   return `${Math.abs(value).toFixed(Math.abs(value) < 0.1 ? 3 : 2)}x`;
+}
+
+function formatRatio(value) {
+  if (!Number.isFinite(value)) {
+    return "Infinity";
+  }
+  return `${value.toFixed(value < 10 ? 2 : 1)}x`;
 }
 
 function niceStep(min, max, tickCount) {
@@ -259,32 +369,32 @@ function roundRectPath(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-function drawPanelBackground(ctx, width, height) {
+function drawPanelBackground(ctx, width, height, palette) {
   const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, "rgba(255, 255, 255, 0.86)");
-  gradient.addColorStop(1, "rgba(247, 240, 229, 0.9)");
+  gradient.addColorStop(0, rgbaTuple(palette.surfaceRgb, 0.86));
+  gradient.addColorStop(1, rgbaTuple(palette.panelRgb, 0.9));
   roundRectPath(ctx, 0, 0, width, height, 18);
   ctx.fillStyle = gradient;
   ctx.fill();
-  ctx.strokeStyle = "rgba(27, 42, 50, 0.08)";
+  ctx.strokeStyle = hexToRgba(palette.ink, 0.08);
   ctx.stroke();
 }
 
-function drawChartFrame(ctx, width, height, yTicks, xTicks, mapX, mapY, yFormatter, xFormatter, yLabel) {
+function drawChartFrame(ctx, width, height, yTicks, xTicks, mapX, mapY, yFormatter, xFormatter, yLabel, palette) {
   const left = 58;
   const right = 16;
   const top = 16;
   const bottom = 34;
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
-  drawPanelBackground(ctx, width, height);
+  drawPanelBackground(ctx, width, height, palette);
   ctx.save();
   ctx.beginPath();
   ctx.rect(left, top, plotWidth, plotHeight);
   ctx.clip();
   yTicks.forEach((tick) => {
     const y = mapY(tick);
-    ctx.strokeStyle = "rgba(27, 42, 50, 0.08)";
+    ctx.strokeStyle = hexToRgba(palette.ink, 0.08);
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(left, y);
@@ -293,7 +403,7 @@ function drawChartFrame(ctx, width, height, yTicks, xTicks, mapX, mapY, yFormatt
   });
   xTicks.forEach((tick) => {
     const x = mapX(tick);
-    ctx.strokeStyle = "rgba(27, 42, 50, 0.06)";
+    ctx.strokeStyle = hexToRgba(palette.ink, 0.06);
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(x, top);
@@ -301,14 +411,14 @@ function drawChartFrame(ctx, width, height, yTicks, xTicks, mapX, mapY, yFormatt
     ctx.stroke();
   });
   ctx.restore();
-  ctx.strokeStyle = "rgba(27, 42, 50, 0.28)";
+  ctx.strokeStyle = hexToRgba(palette.ink, 0.28);
   ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.moveTo(left, top);
   ctx.lineTo(left, height - bottom);
   ctx.lineTo(width - right, height - bottom);
   ctx.stroke();
-  ctx.fillStyle = "#56646b";
+  ctx.fillStyle = palette.muted;
   ctx.font = '12px "Avenir Next", "Trebuchet MS", sans-serif';
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
@@ -370,6 +480,7 @@ function drawMarker(ctx, x, y, label, color, align = "top") {
 
 function drawImageChart(metrics) {
   const { ctx, width, height } = prepareCanvas(elements.imageChart);
+  const palette = readVisualPalette();
   const minDistance = distanceMinMeters();
   const maxDistance = DISTANCE_MAX_METERS;
   const points = [];
@@ -395,13 +506,14 @@ function drawImageChart(metrics) {
     const plotHeight = height - top - bottom;
     return height - bottom - ((value - yMin) / (yMax - yMin)) * plotHeight;
   };
-  drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 100 ? 1 : 0)} mm`, (tick) => formatDistanceMeters(tick), "image distance s'");
-  drawSeries(ctx, points, xToPx, yToPx, "#c26a2c", 3);
-  drawMarker(ctx, xToPx(metrics.focusDistanceMeters), yToPx(metrics.imageDistanceMm), "focus", "#1b7176", "top");
+  drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 100 ? 1 : 0)} mm`, (tick) => formatDistanceMeters(tick), "image distance s'", palette);
+  drawSeries(ctx, points, xToPx, yToPx, palette.amber, 3);
+  drawMarker(ctx, xToPx(metrics.focusDistanceMeters), yToPx(metrics.imageDistanceMm), "focus", palette.teal, "top");
 }
 
 function drawMagnificationChart(metrics) {
   const { ctx, width, height } = prepareCanvas(elements.magnificationChart);
+  const palette = readVisualPalette();
   const minDistance = distanceMinMeters();
   const maxDistance = DISTANCE_MAX_METERS;
   const points = [];
@@ -428,13 +540,14 @@ function drawMagnificationChart(metrics) {
     const plotHeight = height - top - bottom;
     return height - bottom - ((value - yMin) / (yMax - yMin || 1)) * plotHeight;
   };
-  drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 1 ? 2 : 1)}x`, (tick) => formatDistanceMeters(tick), "|m|");
-  drawSeries(ctx, points, xToPx, yToPx, "#1b7176", 3);
-  drawMarker(ctx, xToPx(metrics.focusDistanceMeters), yToPx(Math.abs(metrics.magnification)), "focus", "#c26a2c", "top");
+  drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 1 ? 2 : 1)}x`, (tick) => formatDistanceMeters(tick), "|m|", palette);
+  drawSeries(ctx, points, xToPx, yToPx, palette.teal, 3);
+  drawMarker(ctx, xToPx(metrics.focusDistanceMeters), yToPx(Math.abs(metrics.magnification)), "focus", palette.amber, "top");
 }
 
 function drawBlurChart(metrics) {
   const { ctx, width, height } = prepareCanvas(elements.blurChart);
+  const palette = readVisualPalette();
   const baseMin = distanceMinMeters();
   const nearBound = Number.isFinite(metrics.nearDofMeters) ? Math.max(baseMin, metrics.nearDofMeters * 0.82) : Math.max(baseMin, metrics.focusDistanceMeters * 0.7);
   const farBound = Number.isFinite(metrics.farDofMeters) ? Math.min(DISTANCE_MAX_METERS, Math.max(metrics.farDofMeters * 1.18, metrics.focusDistanceMeters * 1.25)) : Math.min(DISTANCE_MAX_METERS, metrics.focusDistanceMeters * 4);
@@ -470,7 +583,7 @@ function drawBlurChart(metrics) {
     const plotHeight = height - top - bottom;
     return height - bottom - ((value - yMin) / (yMax - yMin || 1)) * plotHeight;
   };
-  const frame = drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 0.1 ? 3 : 2)} mm`, (tick) => formatDistanceMeters(tick), "blur circle c(z)");
+  const frame = drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 0.1 ? 3 : 2)} mm`, (tick) => formatDistanceMeters(tick), "blur circle c(z)", palette);
   ctx.save();
   ctx.beginPath();
   ctx.rect(frame.left, frame.top, frame.plotWidth, frame.plotHeight);
@@ -478,11 +591,11 @@ function drawBlurChart(metrics) {
   const shadeStart = Math.max(minDistance, metrics.nearDofMeters);
   const shadeEnd = Number.isFinite(metrics.farDofMeters) ? Math.min(maxDistance, metrics.farDofMeters) : maxDistance;
   if (shadeEnd > shadeStart) {
-    ctx.fillStyle = "rgba(27, 113, 118, 0.12)";
+    ctx.fillStyle = hexToRgba(palette.teal, 0.12);
     ctx.fillRect(xToPx(shadeStart), frame.top, xToPx(shadeEnd) - xToPx(shadeStart), frame.plotHeight);
   }
   const thresholdY = yToPx(metrics.cocMm);
-  ctx.strokeStyle = "rgba(194, 106, 44, 0.9)";
+  ctx.strokeStyle = hexToRgba(palette.amber, 0.9);
   ctx.lineWidth = 2;
   ctx.setLineDash([8, 6]);
   ctx.beginPath();
@@ -490,11 +603,11 @@ function drawBlurChart(metrics) {
   ctx.lineTo(width - frame.right, thresholdY);
   ctx.stroke();
   ctx.setLineDash([]);
-  drawSeries(ctx, points, xToPx, yToPx, "#1b7176", 3);
+  drawSeries(ctx, points, xToPx, yToPx, palette.teal, 3);
   ctx.restore();
-  drawMarker(ctx, xToPx(metrics.focusDistanceMeters), yToPx(0), "focus", "#c26a2c", "top");
-  drawMarker(ctx, xToPx(clamp(metrics.probeDistanceMeters, minDistance, maxDistance)), yToPx(Math.min(metrics.probeBlurMm, yMax)), "probe", "#8c3f19", "bottom");
-  ctx.fillStyle = "#c26a2c";
+  drawMarker(ctx, xToPx(metrics.focusDistanceMeters), yToPx(0), "focus", palette.amber, "top");
+  drawMarker(ctx, xToPx(clamp(metrics.probeDistanceMeters, minDistance, maxDistance)), yToPx(Math.min(metrics.probeBlurMm, yMax)), "probe", palette.rust, "bottom");
+  ctx.fillStyle = palette.amber;
   ctx.font = '12px "Avenir Next", "Trebuchet MS", sans-serif';
   ctx.textAlign = "left";
   ctx.textBaseline = "bottom";
@@ -515,6 +628,14 @@ function setMarkerLeft(element, ratio) {
 
 function setMarkerBottom(element, ratio) {
   element.style.bottom = `${(clamp(ratio, 0, 1) * 100).toFixed(1)}%`;
+}
+
+function scaleRelativeLog(relativeValue, maxRelative = PROBE_BLUR_MAX_COC_RATIO) {
+  if (!Number.isFinite(relativeValue) || relativeValue <= 0) {
+    return 0;
+  }
+  const capped = Math.min(relativeValue, maxRelative);
+  return Math.log10(1 + capped) / Math.log10(1 + maxRelative);
 }
 
 function svgPath(points, close = false) {
@@ -549,8 +670,10 @@ function updateOutputBars(metrics) {
   const imageDistanceCeiling = imageDistanceMm(metrics.focalLengthMm, closeFocusDistanceMm);
   const magnificationCeiling = Math.abs(magnification(metrics.focalLengthMm, closeFocusDistanceMm));
   const apertureCeiling = apertureDiameterMm(metrics.focalLengthMm, 1.2);
-  const probeBlurCeiling = Math.max(metrics.cocMm * 6, metrics.probeBlurMm * 1.2, 0.12);
   const totalDofReference = Number.isFinite(metrics.totalDofMm) ? Math.max(metrics.focusDistanceMm, metrics.totalDofMm * 1.25, 250) : metrics.focusDistanceMm * 2;
+  const probeBlurRatio = metrics.probeBlurMm / metrics.cocMm;
+  const probeBlurBarLevel = scaleRelativeLog(probeBlurRatio);
+  const probeBlurThresholdLevel = scaleRelativeLog(1);
 
   elements.imageDistanceBarValue.textContent = formatMillimeters(metrics.imageDistanceMm);
   setBarHeight(elements.imageDistanceBar, metrics.imageDistanceMm / imageDistanceCeiling);
@@ -565,9 +688,9 @@ function updateOutputBars(metrics) {
   elements.apertureNote.textContent = `full-open reference ${formatMillimeters(apertureCeiling)}`;
 
   elements.probeBlurBarValue.textContent = formatMillimeters(metrics.probeBlurMm);
-  setBarHeight(elements.probeBlurBar, metrics.probeBlurMm / probeBlurCeiling);
-  setMarkerBottom(elements.probeBlurThreshold, metrics.cocMm / probeBlurCeiling);
-  elements.probeBlurNote.textContent = metrics.probeBlurMm <= metrics.cocMm ? `inside the ${formatMillimeters(metrics.cocMm)} CoC marker` : `marker = ${formatMillimeters(metrics.cocMm)} CoC`;
+  setBarHeight(elements.probeBlurBar, probeBlurBarLevel);
+  setMarkerBottom(elements.probeBlurThreshold, probeBlurThresholdLevel);
+  elements.probeBlurNote.textContent = `log scale, blur is ${formatRatio(probeBlurRatio)} of the CoC limit`;
 
   elements.totalDofBarValue.textContent = Number.isFinite(metrics.totalDofMm) ? formatDistanceMeters(metrics.totalDofMm / 1000) : "Infinity";
   setBarHeight(elements.totalDofBar, Number.isFinite(metrics.totalDofMm) ? metrics.totalDofMm / totalDofReference : 1);
@@ -687,6 +810,145 @@ function updateDerivedMetrics() {
   return metrics;
 }
 
+function updateHelpText(metrics) {
+  const focusEquation = `1/f = 1/s + 1/s' with f=${formatMillimeters(metrics.focalLengthMm)}, s=${formatDistanceMeters(metrics.focusDistanceMeters)}, s'=${formatMillimeters(metrics.imageDistanceMm)}.`;
+  const hyperfocalEquation = `H = f^2 / (N c) + f = ${formatDistanceMeters(metrics.hyperfocalMm / 1000)}.`;
+  const nearEquation = `near = H s / (H + (s - f)) = ${formatDistanceMeters(metrics.nearDofMeters)}.`;
+  const farEquation = Number.isFinite(metrics.farDofMeters)
+    ? `far = H s / (H - (s - f)) = ${formatDistanceMeters(metrics.farDofMeters)}.`
+    : "far = Infinity because the focus distance is at or beyond hyperfocal.";
+  const totalEquation = Number.isFinite(metrics.totalDofMm)
+    ? `total DOF = far - near = ${formatDistanceMeters(metrics.totalDofMm / 1000)}.`
+    : "total DOF extends to Infinity.";
+  const probeImageDistance = imageDistanceMm(metrics.focalLengthMm, metrics.probeDistanceMm);
+  const probeImageText = Number.isFinite(probeImageDistance) ? formatMillimeters(probeImageDistance) : "Infinity";
+
+  setHelp(helpTargets.themeGroup, helpText("Theme preset.", `Current theme: ${displayState.theme}.`, "Changes the background and card color palette only."));
+  setHelp(helpTargets.transparencyGroup, helpText("Window transparency.", `Current transparency: ${displayState.transparency.toFixed(0)}%.`, "Adjusts panel alpha without changing any optics math."));
+  setHelp(helpTargets.contentWidthGroup, helpText("Content width.", `Current max width: ${formatPixels(displayState.width)}.`, "Widens or narrows the overall page layout."));
+  setHelp(helpTargets.blurGroup, helpText("Glass blur.", `Current backdrop blur: ${formatPixels(displayState.blur)}.`, "Controls the frosted-glass blur behind cards and the menu."));
+  setHelp(helpTargets.radiusGroup, helpText("Corner radius.", `Current shared radius: ${formatPixels(displayState.radius)}.`, "Applies the same rounding to cards, bars, and the drawer."));
+
+  setHelp(helpTargets.focalLengthControl, helpText("Focal length f.", `Current f = ${formatMillimeters(metrics.focalLengthMm)}.`, focusEquation, "Longer f usually means tighter framing and larger magnification."));
+  setHelp(helpTargets.focusDistanceControl, helpText("Focus distance s.", `Current s = ${formatDistanceMeters(metrics.focusDistanceMeters)}.`, focusEquation, "Subject distance is measured from the lens plane in this thin-lens model."));
+  setHelp(helpTargets.fNumberControl, helpText("F-number N.", `Current N = ${formatFNumber(metrics.fNumber)}.`, `Aperture diameter D = f / N = ${formatMillimeters(metrics.apertureDiameterMm)}.`, "Smaller N means a wider opening and usually shallower depth of field."));
+  setHelp(helpTargets.cocControl, helpText("Circle of confusion c.", `Current CoC = ${formatMillimeters(metrics.cocMm)}.`, "Depth of field is the span where the blur circle stays at or below this limit.", hyperfocalEquation));
+  setHelp(helpTargets.probeDistanceControl, helpText("Probe distance z.", `Current z = ${formatDistanceMeters(metrics.probeDistanceMeters)}.`, `z' = f z / (z - f) = ${probeImageText}.`, `Probe blur c(z) = D |s'_focus - z'| / z' = ${formatMillimeters(metrics.probeBlurMm)}.`));
+
+  setHelp(helpTargets.summaryText, helpText("Live thin-lens summary.", focusEquation, `Magnification m = -s' / s = ${formatMagnification(metrics.magnification)}.`, `Probe blur c(z) = ${formatMillimeters(metrics.probeBlurMm)}.`));
+
+  setHelp(helpTargets.nearDofPill, helpText("Near depth-of-field limit.", hyperfocalEquation, nearEquation));
+  setHelp(helpTargets.farDofPill, helpText("Far depth-of-field limit.", hyperfocalEquation, farEquation));
+  setHelp(helpTargets.totalDofPill, helpText("Total depth of field.", nearEquation, farEquation, totalEquation));
+
+  setHelp(helpTargets.imageDistanceBar, helpText("Image distance s'.", "Computed from the thin-lens equation.", `s' = f s / (s - f) = ${formatMillimeters(metrics.imageDistanceMm)}.`));
+  setHelp(helpTargets.magnificationBar, helpText("Magnification m.", `m = -s' / s = ${formatMagnification(metrics.magnification)}.`, "The bar uses |m| so the size change stays easy to compare."));
+  setHelp(helpTargets.apertureBar, helpText("Aperture diameter D.", `D = f / N = ${formatMillimeters(metrics.apertureDiameterMm)}.`, "This is the effective opening size used in the blur calculation."));
+  setHelp(helpTargets.probeBlurBar, helpText("Probe blur c(z).", `z' = f z / (z - f) = ${probeImageText}.`, `c(z) = D |s'_focus - z'| / z' = ${formatMillimeters(metrics.probeBlurMm)}.`, `The threshold marker is the CoC limit: ${formatMillimeters(metrics.cocMm)}.`));
+  setHelp(helpTargets.totalDofBar, helpText("Total depth of field.", hyperfocalEquation, nearEquation, farEquation, totalEquation));
+  setHelp(helpTargets.hyperfocalBar, helpText("Hyperfocal distance H.", "This is the focus distance that pushes the far DOF limit to Infinity.", hyperfocalEquation));
+
+  setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, "The sketch shows lens groups shifting to change the net optical power.", "Approximate field slice: 2 * atan(sensor_half / f)."));
+  setHelp([helpTargets.imageChartCard, elements.imageChart], helpText("Image distance chart.", "Y-axis equation: s' = f s / (s - f).", "The focus marker shows the currently selected subject distance s."));
+  setHelp([helpTargets.magnificationChartCard, elements.magnificationChart], helpText("Magnification chart.", "Y-axis equation: |m| = |-s' / s|.", "The bar values keep the sign, but the plot shows magnitude only."));
+  setHelp([helpTargets.blurChartCard, elements.blurChart], helpText("Blur and depth-of-field chart.", "Blur equation: c(z) = D |s'_focus - z'| / z', with z' = f z / (z - f).", "The shaded region is where c(z) <= CoC.", `Current CoC threshold: ${formatMillimeters(metrics.cocMm)}.`));
+}
+
+function loadDisplaySettings() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(DISPLAY_STORAGE_KEY) || "null");
+    if (!stored || typeof stored !== "object") {
+      return;
+    }
+    displayState.theme = DISPLAY_THEMES.includes(stored.theme) ? stored.theme : DISPLAY_DEFAULTS.theme;
+    displayState.transparency = quantize(clamp(safeNumber(stored.transparency, DISPLAY_DEFAULTS.transparency), 0, 60));
+    displayState.width = quantize(clamp(safeNumber(stored.width, DISPLAY_DEFAULTS.width), 960, 1600), 20);
+    displayState.blur = quantize(clamp(safeNumber(stored.blur, DISPLAY_DEFAULTS.blur), 0, 28));
+    displayState.radius = quantize(clamp(safeNumber(stored.radius, DISPLAY_DEFAULTS.radius), 18, 34));
+  } catch {
+    Object.assign(displayState, DISPLAY_DEFAULTS);
+  }
+}
+
+function saveDisplaySettings() {
+  try {
+    window.localStorage.setItem(DISPLAY_STORAGE_KEY, JSON.stringify(displayState));
+  } catch {
+    // Ignore storage failures so the page still works from file:// or private contexts.
+  }
+}
+
+function syncThemeButtons() {
+  elements.themeButtons.forEach((button) => {
+    const active = button.dataset.themeOption === displayState.theme;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+function syncDisplayControls() {
+  elements.transparencyRange.value = displayState.transparency.toFixed(0);
+  elements.transparencyDisplay.textContent = `${displayState.transparency.toFixed(0)}%`;
+  elements.contentWidthRange.value = displayState.width.toFixed(0);
+  elements.contentWidthDisplay.textContent = formatPixels(displayState.width);
+  elements.blurStrengthRange.value = displayState.blur.toFixed(0);
+  elements.blurStrengthDisplay.textContent = formatPixels(displayState.blur);
+  elements.radiusRange.value = displayState.radius.toFixed(0);
+  elements.radiusDisplay.textContent = formatPixels(displayState.radius);
+  syncThemeButtons();
+}
+
+function setDisplayMenuOpen(isOpen, shouldRefocus = false) {
+  elements.displayMenuToggle.classList.toggle("is-open", isOpen);
+  elements.displayMenuToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  elements.displayMenuToggle.setAttribute("aria-label", isOpen ? "Close display options" : "Open display options");
+  elements.displayDrawer.classList.toggle("is-open", isOpen);
+  elements.displayDrawer.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  elements.displayScrim.classList.toggle("is-open", isOpen);
+  document.body.classList.toggle("menu-open", isOpen);
+  if (shouldRefocus) {
+    const focusTarget = isOpen ? elements.displayMenuClose : elements.displayMenuToggle;
+    focusTarget.focus();
+  }
+}
+
+let renderFrame = 0;
+
+function scheduleRender() {
+  if (renderFrame) {
+    return;
+  }
+  renderFrame = window.requestAnimationFrame(() => {
+    renderFrame = 0;
+    render();
+  });
+}
+
+function applyDisplaySettings(shouldRedraw = false) {
+  const transparency = displayState.transparency / 60;
+  const panelAlpha = 0.92 - transparency * 0.42;
+  const panelStrongAlpha = 0.98 - transparency * 0.22;
+  const surfaceSoftAlpha = 0.66 - transparency * 0.3;
+  const surfaceMidAlpha = 0.72 - transparency * 0.28;
+  const surfaceStrongAlpha = 0.96 - transparency * 0.18;
+  const statusAlpha = 0.68 - transparency * 0.24;
+
+  document.body.dataset.theme = displayState.theme;
+  document.documentElement.style.setProperty("--page-max-width", `${displayState.width}px`);
+  document.documentElement.style.setProperty("--glass-blur", `${displayState.blur}px`);
+  document.documentElement.style.setProperty("--panel-radius", `${displayState.radius}px`);
+  document.documentElement.style.setProperty("--panel-alpha", panelAlpha.toFixed(3));
+  document.documentElement.style.setProperty("--panel-strong-alpha", panelStrongAlpha.toFixed(3));
+  document.documentElement.style.setProperty("--surface-soft-alpha", surfaceSoftAlpha.toFixed(3));
+  document.documentElement.style.setProperty("--surface-mid-alpha", surfaceMidAlpha.toFixed(3));
+  document.documentElement.style.setProperty("--surface-strong-alpha", surfaceStrongAlpha.toFixed(3));
+  document.documentElement.style.setProperty("--status-alpha", statusAlpha.toFixed(3));
+  syncDisplayControls();
+  if (shouldRedraw) {
+    scheduleRender();
+  }
+}
+
 function syncPresetButtons() {
   elements.presetButtons.forEach((button) => {
     const preset = presets[button.dataset.preset];
@@ -729,6 +991,7 @@ function syncControls() {
 function render() {
   syncControls();
   const metrics = updateDerivedMetrics();
+  updateHelpText(metrics);
   updateOutputBars(metrics);
   updateZoomDemo(metrics);
   drawImageChart(metrics);
@@ -760,6 +1023,15 @@ function bindDistancePair(rangeElement, numberElement, key) {
   });
 }
 
+function bindDisplayRange(rangeElement, key, min, max, step = 1) {
+  rangeElement.addEventListener("input", () => {
+    const nextValue = quantize(clamp(safeNumber(rangeElement.value, displayState[key]), min, max), step);
+    displayState[key] = nextValue;
+    applyDisplaySettings(true);
+    saveDisplaySettings();
+  });
+}
+
 bindLinearPair(elements.focalLengthRange, elements.focalLengthNumber, "focalLength", 4, 300);
 bindLinearPair(elements.fNumberRange, elements.fNumberNumber, "fNumber", 1.2, 22);
 bindLinearPair(elements.cocRange, elements.cocNumber, "coc", 0.005, 0.06);
@@ -777,6 +1049,50 @@ elements.presetButtons.forEach((button) => {
   });
 });
 
-window.addEventListener("resize", render);
+elements.displayMenuToggle.addEventListener("click", () => {
+  const isOpen = !elements.displayDrawer.classList.contains("is-open");
+  setDisplayMenuOpen(isOpen, true);
+});
 
+elements.displayMenuClose.addEventListener("click", () => {
+  setDisplayMenuOpen(false, true);
+});
+
+elements.displayScrim.addEventListener("click", () => {
+  setDisplayMenuOpen(false);
+});
+
+elements.themeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const theme = button.dataset.themeOption;
+    if (!DISPLAY_THEMES.includes(theme)) {
+      return;
+    }
+    displayState.theme = theme;
+    applyDisplaySettings(true);
+    saveDisplaySettings();
+  });
+});
+
+bindDisplayRange(elements.transparencyRange, "transparency", 0, 60);
+bindDisplayRange(elements.contentWidthRange, "width", 960, 1600, 20);
+bindDisplayRange(elements.blurStrengthRange, "blur", 0, 28);
+bindDisplayRange(elements.radiusRange, "radius", 18, 34);
+
+elements.resetDisplayButton.addEventListener("click", () => {
+  Object.assign(displayState, DISPLAY_DEFAULTS);
+  applyDisplaySettings(true);
+  saveDisplaySettings();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && elements.displayDrawer.classList.contains("is-open")) {
+    setDisplayMenuOpen(false, true);
+  }
+});
+
+window.addEventListener("resize", scheduleRender);
+
+loadDisplaySettings();
+applyDisplaySettings();
 render();
