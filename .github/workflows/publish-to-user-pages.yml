@@ -1,0 +1,146 @@
+name: Publish To User Pages Subpage
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - index.html
+      - styles.css
+      - app.js
+      - assets/**
+      - pages-subpage.manifest
+      - .github/workflows/publish-to-user-pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-user-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source repository
+        uses: actions/checkout@v4
+
+      - name: Validate publish token
+        env:
+          PAGES_PUBLISH_TOKEN: ${{ secrets.PAGES_PUBLISH_TOKEN }}
+        run: |
+          if [ -z "$PAGES_PUBLISH_TOKEN" ]; then
+            echo "Missing secret PAGES_PUBLISH_TOKEN." >&2
+            echo "Create a fine-grained PAT with Contents: Read and Write access to the ${GITHUB_REPOSITORY_OWNER}.github.io repository." >&2
+            exit 1
+          fi
+
+      - name: Resolve target repository and subpage
+        id: vars
+        env:
+          REPOSITORY_NAME: ${{ github.event.repository.name }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          PAGES_SUBPAGE: ${{ vars.PAGES_SUBPAGE }}
+          PAGES_TARGET_ROOT: ${{ vars.PAGES_TARGET_ROOT }}
+        run: |
+          site_repo="${REPOSITORY_OWNER}.github.io"
+          subpage="${PAGES_SUBPAGE:-$REPOSITORY_NAME}"
+          target_root="${PAGES_TARGET_ROOT:-.}"
+          echo "site_repo=$site_repo" >> "$GITHUB_OUTPUT"
+          echo "subpage=$subpage" >> "$GITHUB_OUTPUT"
+          echo "target_root=$target_root" >> "$GITHUB_OUTPUT"
+
+      - name: Clone user Pages repository
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          SITE_REPO: ${{ steps.vars.outputs.site_repo }}
+          PAGES_PUBLISH_TOKEN: ${{ secrets.PAGES_PUBLISH_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${PAGES_PUBLISH_TOKEN}@github.com/${REPOSITORY_OWNER}/${SITE_REPO}.git" pages-site
+          cd pages-site
+          default_branch="$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')"
+          echo "DEFAULT_BRANCH=$default_branch" >> "$GITHUB_ENV"
+
+      - name: Sync subpage files into user Pages repository
+        env:
+          SUBPAGE: ${{ steps.vars.outputs.subpage }}
+          TARGET_ROOT: ${{ steps.vars.outputs.target_root }}
+        run: |
+          set -euo pipefail
+
+          if [ "$TARGET_ROOT" = "." ]; then
+            publish_root="$GITHUB_WORKSPACE/pages-site/$SUBPAGE"
+          else
+            publish_root="$GITHUB_WORKSPACE/pages-site/$TARGET_ROOT/$SUBPAGE"
+          fi
+
+          rm -rf "$publish_root"
+          mkdir -p "$publish_root"
+
+          while IFS= read -r relpath || [ -n "$relpath" ]; do
+            relpath="$(printf '%s' "$relpath" | sed 's/[[:space:]]*$//')"
+            if [ -z "$relpath" ]; then
+              continue
+            fi
+            case "$relpath" in
+              \#*)
+                continue
+                ;;
+            esac
+
+            src="$GITHUB_WORKSPACE/$relpath"
+            dest="$publish_root/$relpath"
+
+            if [ -d "$src" ]; then
+              mkdir -p "$dest"
+              rsync -av "$src/" "$dest/"
+            elif [ -f "$src" ]; then
+              mkdir -p "$(dirname "$dest")"
+              cp "$src" "$dest"
+            else
+              echo "Manifest entry not found: $relpath" >&2
+              exit 1
+            fi
+          done < "$GITHUB_WORKSPACE/pages-subpage.manifest"
+
+          if [ "$TARGET_ROOT" = "." ]; then
+            nojekyll_path="$GITHUB_WORKSPACE/pages-site/.nojekyll"
+          else
+            mkdir -p "$GITHUB_WORKSPACE/pages-site/$TARGET_ROOT"
+            nojekyll_path="$GITHUB_WORKSPACE/pages-site/$TARGET_ROOT/.nojekyll"
+          fi
+
+          touch "$nojekyll_path"
+
+      - name: Commit and push updated subpage
+        env:
+          SUBPAGE: ${{ steps.vars.outputs.subpage }}
+          TARGET_ROOT: ${{ steps.vars.outputs.target_root }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE/pages-site"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ "$TARGET_ROOT" = "." ]; then
+            publish_path="$SUBPAGE"
+            nojekyll_path=".nojekyll"
+          else
+            publish_path="$TARGET_ROOT/$SUBPAGE"
+            nojekyll_path="$TARGET_ROOT/.nojekyll"
+          fi
+
+          git add "$nojekyll_path" "$publish_path"
+
+          if git diff --cached --quiet; then
+            echo "No Pages changes to publish."
+            exit 0
+          fi
+
+          git commit -m "Publish ${GITHUB_REPOSITORY} to /${publish_path}/"
+          git push origin "$DEFAULT_BRANCH"
