@@ -54,6 +54,18 @@
               <span class="theme-swatch forest"></span>
               Forest
             </button>
+            <button class="theme-chip" data-theme-option="midnight" type="button">
+              <span class="theme-swatch midnight"></span>
+              Midnight
+            </button>
+            <button class="theme-chip" data-theme-option="ember" type="button">
+              <span class="theme-swatch ember"></span>
+              Ember
+            </button>
+            <button class="theme-chip" data-theme-option="aurora" type="button">
+              <span class="theme-swatch aurora"></span>
+              Aurora
+            </button>
           </div>
         </div>
 
@@ -171,7 +183,7 @@
           </div>
 
           <p class="status-line" id="summaryText">
-            85 mm | focus 2.00 m | sensor 88.8 mm | probe blur 0.629 mm
+            f 85 mm | s 2.00 m | s' 88.8 mm | c(z) 0.629 mm | DOF 6.36 cm
           </p>
 
           <p class="controls-note">
@@ -181,23 +193,23 @@
           <div class="controls-grid">
             <div class="control">
               <div class="control-top">
-                <label for="focalLengthRange">Focal length f</label>
+                <label for="focalLengthRange">f</label>
                 <output id="focalLengthDisplay">85 mm</output>
               </div>
               <div class="control-inputs">
                 <input
                   id="focalLengthRange"
                   type="range"
-                  min="4"
-                  max="300"
+                  min="6"
+                  max="400"
                   step="1"
                   value="85"
                 />
                 <input
                   id="focalLengthNumber"
                   type="number"
-                  min="4"
-                  max="300"
+                  min="6"
+                  max="400"
                   step="1"
                   value="85"
                 />
@@ -206,7 +218,7 @@
 
             <div class="control">
               <div class="control-top">
-                <label for="sensorDistanceRange">Sensor distance s'</label>
+                <label for="sensorDistanceRange">s'</label>
                 <output id="sensorDistanceDisplay">88.8 mm</output>
               </div>
               <div class="control-inputs">
@@ -221,7 +233,7 @@
                 <input
                   id="sensorDistanceNumber"
                   type="number"
-                  min="4.00"
+                  min="6.00"
                   max="10000"
                   step="0.01"
                   value="88.82"
@@ -231,7 +243,7 @@
 
             <div class="control">
               <div class="control-top">
-                <label for="focusDistanceRange">Focus distance s</label>
+                <label for="focusDistanceRange">s</label>
                 <output id="focusDistanceDisplay">2.00 m</output>
               </div>
               <div class="control-inputs">
@@ -246,7 +258,7 @@
                 <input
                   id="focusDistanceNumber"
                   type="number"
-                  min="0.05"
+                  min="0.10"
                   max="100"
                   step="0.01"
                   value="2.00"
@@ -256,7 +268,7 @@
 
             <div class="control">
               <div class="control-top">
-                <label for="fNumberRange">F-number N</label>
+                <label for="fNumberRange">N</label>
                 <output id="fNumberDisplay">f/2.0</output>
               </div>
               <div class="control-inputs">
@@ -264,7 +276,7 @@
                   id="fNumberRange"
                   type="range"
                   min="1.2"
-                  max="22"
+                  max="32"
                   step="0.1"
                   value="2.0"
                 />
@@ -272,7 +284,7 @@
                   id="fNumberNumber"
                   type="number"
                   min="1.2"
-                  max="22"
+                  max="32"
                   step="0.1"
                   value="2.0"
                 />
@@ -281,23 +293,23 @@
 
             <div class="control">
               <div class="control-top">
-                <label for="cocRange">Circle of confusion</label>
+                <label for="cocRange">c</label>
                 <output id="cocDisplay">0.030 mm</output>
               </div>
               <div class="control-inputs">
                 <input
                   id="cocRange"
                   type="range"
-                  min="0.005"
-                  max="0.060"
+                  min="0.003"
+                  max="0.050"
                   step="0.001"
                   value="0.030"
                 />
                 <input
                   id="cocNumber"
                   type="number"
-                  min="0.005"
-                  max="0.060"
+                  min="0.003"
+                  max="0.050"
                   step="0.001"
                   value="0.030"
                 />
@@ -306,7 +318,7 @@
 
             <div class="control">
               <div class="control-top">
-                <label for="probeDistanceRange">Probe distance z</label>
+                <label for="probeDistanceRange">z</label>
                 <output id="probeDistanceDisplay">3.00 m</output>
               </div>
               <div class="control-inputs">
@@ -321,7 +333,7 @@
                 <input
                   id="probeDistanceNumber"
                   type="number"
-                  min="0.05"
+                  min="0.10"
                   max="100"
                   step="0.01"
                   value="3.00"
@@ -336,22 +348,22 @@
             <div class="section-head">
               <h2>Derived outputs</h2>
               <p>
-                Each bar uses a local working range so motion stays readable
-                while the live number keeps the exact value visible.
+                Each bar uses a fixed per-metric scale, so equal values stay at
+                equal heights across different setups.
               </p>
             </div>
 
             <div class="quick-pills">
               <div class="quick-pill">
-                <span>Near DOF</span>
+                <span>near</span>
                 <strong id="nearDofValue">1.97 m</strong>
               </div>
               <div class="quick-pill">
-                <span>Far DOF</span>
+                <span>far</span>
                 <strong id="farDofValue">2.03 m</strong>
               </div>
               <div class="quick-pill">
-                <span>Total DOF</span>
+                <span>DOF</span>
                 <strong id="totalDofValue">6.36 cm</strong>
               </div>
             </div>
@@ -362,7 +374,7 @@
                 <div class="bar-plot">
                   <div class="bar-fill amber" id="imageDistanceBar"></div>
                 </div>
-                <span class="bar-label">Image distance s'</span>
+                <span class="bar-label">s'</span>
                 <span class="bar-note" id="imageDistanceNote">close-focus range</span>
               </div>
 
@@ -371,7 +383,7 @@
                 <div class="bar-plot">
                   <div class="bar-fill teal" id="magnificationBar"></div>
                 </div>
-                <span class="bar-label">Magnification m</span>
+                <span class="bar-label">m</span>
                 <span class="bar-note" id="magnificationNote">bar uses |m|</span>
               </div>
 
@@ -380,7 +392,7 @@
                 <div class="bar-plot">
                   <div class="bar-fill sand" id="apertureBar"></div>
                 </div>
-                <span class="bar-label">Aperture diameter D</span>
+                <span class="bar-label">D</span>
                 <span class="bar-note" id="apertureNote">opening size</span>
               </div>
 
@@ -390,7 +402,7 @@
                   <div class="bar-fill rust" id="probeBlurBar"></div>
                   <div class="bar-threshold" id="probeBlurThreshold"></div>
                 </div>
-                <span class="bar-label">Probe blur c(z)</span>
+                <span class="bar-label">c(z)</span>
                 <span class="bar-note" id="probeBlurNote">marker = CoC threshold</span>
               </div>
 
@@ -399,7 +411,7 @@
                 <div class="bar-plot">
                   <div class="bar-fill moss" id="totalDofBar"></div>
                 </div>
-                <span class="bar-label">Total depth of field</span>
+                <span class="bar-label">DOF</span>
                 <span class="bar-note" id="totalDofNote">relative to focus distance</span>
               </div>
 
@@ -408,7 +420,7 @@
                 <div class="bar-plot">
                   <div class="bar-fill plum" id="hyperfocalBar"></div>
                 </div>
-                <span class="bar-label">Hyperfocal H</span>
+                <span class="bar-label">H</span>
                 <span class="bar-note" id="hyperfocalNote">reference ceiling</span>
               </div>
             </div>
@@ -532,17 +544,8 @@
                 s' = 88.8 mm
               </text>
 
-              <line id="zoomBlurLeader" class="callout-line blur-line" x1="500" y1="150" x2="446" y2="184"></line>
-              <text class="demo-tag blur-tag" id="zoomBlurText" x="438" y="188" text-anchor="end">
-                blur
-              </text>
-
               <circle id="zoomProbeBlurDisc" class="probe-blur-disc" cx="514" cy="140" r="14"></circle>
               <circle id="zoomCocRing" class="coc-ring" cx="514" cy="140" r="7"></circle>
-              <line id="zoomCocLeader" class="callout-line coc-line" x1="506" y1="132" x2="456" y2="106"></line>
-              <text class="demo-tag coc-tag" id="zoomCocText" x="448" y="110" text-anchor="end">
-                CoC
-              </text>
 
               <line id="zoomSensorPlane" class="sensor-plane" x1="514" y1="72" x2="514" y2="208"></line>
               <text class="demo-label" id="zoomSensorLabel" x="520" y="88">sensor</text>

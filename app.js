@@ -1,10 +1,24 @@
+const FOCAL_LENGTH_MIN_MM = 6;
+const FOCAL_LENGTH_MAX_MM = 400;
+const F_NUMBER_MIN = 1.2;
+const F_NUMBER_MAX = 32;
+const COC_MIN_MM = 0.003;
+const COC_MAX_MM = 0.05;
 const DISTANCE_MAX_METERS = 100;
 const SAMPLE_COUNT = 220;
 const BLUR_SAMPLE_COUNT = 260;
-const DISTANCE_MARGIN_METERS = 0.01;
-const DISTANCE_FLOOR_METERS = 0.05;
+const DISTANCE_MARGIN_METERS = 0.02;
+const DISTANCE_FLOOR_METERS = 0.1;
+const BAR_SCALE_LIMITS = Object.freeze({
+  imageDistanceMm: { min: 4, max: 10000 },
+  magnificationAbs: { min: 0.0001, max: 30 },
+  apertureDiameterMm: { min: 0.18, max: 250 },
+  probeBlurMm: { min: 0.001, max: 250 },
+  totalDofMm: { min: 0.1, max: 100000 },
+  hyperfocalMm: { min: 10, max: 20000000 },
+});
 const DISPLAY_STORAGE_KEY = "lens-equations-display";
-const DISPLAY_THEMES = ["sand", "slate", "forest"];
+const DISPLAY_THEMES = ["sand", "slate", "forest", "midnight", "ember", "aurora"];
 const DISPLAY_DEFAULTS = Object.freeze({
   theme: "sand",
   verbose: false,
@@ -97,12 +111,8 @@ const elements = {
   zoomSensorDistanceStartTick: document.getElementById("zoomSensorDistanceStartTick"),
   zoomSensorDistanceEndTick: document.getElementById("zoomSensorDistanceEndTick"),
   zoomSensorDistanceText: document.getElementById("zoomSensorDistanceText"),
-  zoomBlurLeader: document.getElementById("zoomBlurLeader"),
-  zoomBlurText: document.getElementById("zoomBlurText"),
   zoomProbeBlurDisc: document.getElementById("zoomProbeBlurDisc"),
-  zoomCocLeader: document.getElementById("zoomCocLeader"),
   zoomCocRing: document.getElementById("zoomCocRing"),
-  zoomCocText: document.getElementById("zoomCocText"),
   zoomFieldCone: document.getElementById("zoomFieldCone"),
   zoomRayTop: document.getElementById("zoomRayTop"),
   zoomRayMid: document.getElementById("zoomRayMid"),
@@ -320,6 +330,12 @@ function formatRatioMagnitude(value) {
   return `${Math.abs(value).toFixed(Math.abs(value) < 0.1 ? 3 : 2)}x`;
 }
 
+function formatScaleRatio(value) {
+  const magnitude = Math.abs(value);
+  const precision = magnitude < 0.01 ? 4 : magnitude < 0.1 ? 3 : magnitude < 1 ? 2 : 1;
+  return `${magnitude.toFixed(precision)}x`;
+}
+
 function formatRatio(value) {
   if (!Number.isFinite(value)) {
     return "Infinity";
@@ -411,7 +427,7 @@ function prepareCanvas(canvas) {
 }
 
 function chartFrameBox(width, height) {
-  const left = 74;
+  const left = 94;
   const right = 18;
   const top = 18;
   const bottom = 56;
@@ -456,21 +472,23 @@ function normalizeRange(value, min, max) {
   return clamp((value - min) / (max - min), 0, 1);
 }
 
-function niceUpperBound(value, minimum = 1, tickCount = 4, headroom = 1.1) {
-  if (!Number.isFinite(value) || value <= 0) {
-    return minimum;
-  }
-  const expanded = Math.max(minimum, value * headroom);
-  const step = niceStep(0, expanded, tickCount);
-  return Math.max(minimum, Math.ceil(expanded / step) * step);
-}
-
 function sensorDistanceBoundsMm(focalLengthMm) {
   const minFocusDistanceMm = distanceMinMetersForFocalLength(focalLengthMm) * 1000;
   return {
     min: imageDistanceMm(focalLengthMm, DISTANCE_MAX_METERS * 1000),
     max: imageDistanceMm(focalLengthMm, minFocusDistanceMm),
   };
+}
+
+function scaleLogBar(value, min, max) {
+  if (!Number.isFinite(value)) {
+    return 1;
+  }
+  if (value <= 0 || min <= 0 || max <= min) {
+    return 0;
+  }
+  const clampedValue = clamp(value, min, max);
+  return normalizeRange(Math.log10(clampedValue), Math.log10(min), Math.log10(max));
 }
 
 function roundRectPath(ctx, x, y, width, height, radius) {
@@ -495,7 +513,7 @@ function drawPanelBackground(ctx, width, height, palette) {
   ctx.stroke();
 }
 
-function drawChartFrame(ctx, width, height, yTicks, xTicks, mapX, mapY, yFormatter, xFormatter, yLabel, palette, xLabel = "subject distance s") {
+function drawChartFrame(ctx, width, height, yTicks, xTicks, mapX, mapY, yFormatter, xFormatter, yLabel, palette, xLabel = "s") {
   const { left, right, top, bottom, plotWidth, plotHeight } = chartFrameBox(width, height);
   const visibleXTicks = filterTicksBySpacing(xTicks, mapX, 62);
   const visibleYTicks = filterTicksBySpacing(yTicks, mapY, 28);
@@ -534,13 +552,14 @@ function drawChartFrame(ctx, width, height, yTicks, xTicks, mapX, mapY, yFormatt
   ctx.font = '12px "Avenir Next", "Trebuchet MS", sans-serif';
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  visibleYTicks.forEach((tick) => ctx.fillText(yFormatter(tick), left - 12, mapY(tick)));
+  visibleYTicks.forEach((tick) => ctx.fillText(yFormatter(tick), left - 16, mapY(tick)));
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   visibleXTicks.forEach((tick) => ctx.fillText(xFormatter(tick), mapX(tick), height - bottom + 10));
   ctx.save();
-  ctx.translate(22, top + plotHeight / 2);
+  ctx.translate(14, top + plotHeight / 2);
   ctx.rotate(-Math.PI / 2);
+  ctx.font = '11px "Avenir Next", "Trebuchet MS", sans-serif';
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.fillText(yLabel, 0, 0);
@@ -613,7 +632,7 @@ function drawImageChart(metrics) {
   const yToPx = (value) => {
     return height - frame.bottom - ((value - yMin) / (yMax - yMin || 1)) * frame.plotHeight;
   };
-  drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 100 ? 1 : 0)} mm`, (tick) => formatDistanceMeters(tick), "image distance s'", palette);
+  drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 100 ? 1 : 0)} mm`, (tick) => formatDistanceMeters(tick), "s'", palette, "s");
   drawSeries(ctx, points, xToPx, yToPx, palette.amber, 3);
   drawMarker(ctx, xToPx(metrics.focusDistanceMeters), yToPx(metrics.imageDistanceMm), "focus", palette.teal, "top");
 }
@@ -642,7 +661,7 @@ function drawMagnificationChart(metrics) {
   const yToPx = (value) => {
     return height - frame.bottom - ((value - yMin) / (yMax - yMin || 1)) * frame.plotHeight;
   };
-  drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 1 ? 2 : 1)}x`, (tick) => formatDistanceMeters(tick), "|m|", palette);
+  drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 1 ? 2 : 1)}x`, (tick) => formatDistanceMeters(tick), "|m|", palette, "s");
   drawSeries(ctx, points, xToPx, yToPx, palette.teal, 3);
   drawMarker(ctx, xToPx(metrics.focusDistanceMeters), yToPx(Math.abs(metrics.magnification)), "focus", palette.amber, "top");
 }
@@ -680,7 +699,7 @@ function drawBlurChart(metrics) {
   const yToPx = (value) => {
     return height - layout.bottom - ((value - yMin) / (yMax - yMin || 1)) * layout.plotHeight;
   };
-  const frame = drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 0.1 ? 3 : 2)} mm`, (tick) => formatDistanceMeters(tick), "blur circle c(z)", palette);
+  const frame = drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 0.1 ? 3 : 2)} mm`, (tick) => formatDistanceMeters(tick), "c(z)", palette, "s");
   ctx.save();
   ctx.beginPath();
   ctx.rect(frame.left, frame.top, frame.plotWidth, frame.plotHeight);
@@ -727,14 +746,6 @@ function setMarkerBottom(element, ratio) {
   element.style.bottom = `${(clamp(ratio, 0, 1) * 100).toFixed(1)}%`;
 }
 
-function scaleRelativeLog(relativeValue, maxRelative = 4) {
-  if (!Number.isFinite(relativeValue) || relativeValue <= 0) {
-    return 0;
-  }
-  const capped = Math.min(relativeValue, maxRelative);
-  return Math.log10(1 + capped) / Math.log10(1 + maxRelative);
-}
-
 function svgPath(points, close = false) {
   if (points.length === 0) {
     return "";
@@ -744,8 +755,8 @@ function svgPath(points, close = false) {
 }
 
 function normalizeZoom(focalLengthMm) {
-  const min = 4;
-  const max = 300;
+  const min = FOCAL_LENGTH_MIN_MM;
+  const max = FOCAL_LENGTH_MAX_MM;
   return clamp((Math.log(focalLengthMm) - Math.log(min)) / (Math.log(max) - Math.log(min)), 0, 1);
 }
 
@@ -773,46 +784,39 @@ function zoomDescriptor(focalLengthMm) {
 }
 
 function updateOutputBars(metrics) {
-  const closeFocusDistanceMm = distanceMinMeters() * 1000;
-  const workingReferenceDistanceMm = Math.sqrt(closeFocusDistanceMm * metrics.focusDistanceMm);
-  const imageDistanceFloor = imageDistanceMm(metrics.focalLengthMm, DISTANCE_MAX_METERS * 1000);
-  const imageDistanceCeiling = niceUpperBound(imageDistanceMm(metrics.focalLengthMm, workingReferenceDistanceMm), metrics.focalLengthMm * 1.05, 4, 1.04);
-  const magnificationCeiling = niceUpperBound(Math.abs(magnification(metrics.focalLengthMm, workingReferenceDistanceMm)), 0.1, 4, 1.05);
-  const apertureFloor = apertureDiameterMm(metrics.focalLengthMm, 22);
-  const apertureCeiling = apertureDiameterMm(metrics.focalLengthMm, 1.2);
-  const totalDofReference = Number.isFinite(metrics.totalDofMm)
-    ? niceUpperBound(Math.max(metrics.totalDofMm, metrics.focusDistanceMm * 0.8), 250, 4, 1.12)
-    : niceUpperBound(metrics.focusDistanceMm * 2, metrics.focusDistanceMm * 2, 4, 1.1);
-  const hyperfocalReference = niceUpperBound(metrics.hyperfocalMm, Math.max(metrics.focusDistanceMm * 1.5, 1000), 4, 1.1);
-  const probeBlurRatio = metrics.probeBlurMm / metrics.cocMm;
-  const probeBlurMaxRatio = niceUpperBound(Math.max(probeBlurRatio, 1), 4, 4, 1.15);
-  const probeBlurBarLevel = scaleRelativeLog(probeBlurRatio, probeBlurMaxRatio);
-  const probeBlurThresholdLevel = scaleRelativeLog(1, probeBlurMaxRatio);
+  const imageDistanceScale = BAR_SCALE_LIMITS.imageDistanceMm;
+  const magnificationScale = BAR_SCALE_LIMITS.magnificationAbs;
+  const apertureScale = BAR_SCALE_LIMITS.apertureDiameterMm;
+  const probeBlurScale = BAR_SCALE_LIMITS.probeBlurMm;
+  const totalDofScale = BAR_SCALE_LIMITS.totalDofMm;
+  const hyperfocalScale = BAR_SCALE_LIMITS.hyperfocalMm;
 
   elements.imageDistanceBarValue.textContent = formatMillimeters(metrics.imageDistanceMm);
-  setBarHeight(elements.imageDistanceBar, normalizeRange(metrics.imageDistanceMm, imageDistanceFloor, imageDistanceCeiling));
-  elements.imageDistanceNote.textContent = `${formatMillimeters(imageDistanceFloor)} to ${formatMillimeters(imageDistanceCeiling)}`;
+  setBarHeight(elements.imageDistanceBar, scaleLogBar(metrics.imageDistanceMm, imageDistanceScale.min, imageDistanceScale.max));
+  elements.imageDistanceNote.textContent = `fixed log ${formatMillimeters(imageDistanceScale.min)} to ${formatMillimeters(imageDistanceScale.max)}`;
 
   elements.magnificationBarValue.textContent = formatMagnification(metrics.magnification);
-  setBarHeight(elements.magnificationBar, Math.abs(metrics.magnification) / magnificationCeiling);
-  elements.magnificationNote.textContent = `range 0 to ${formatRatioMagnitude(-magnificationCeiling)}`;
+  setBarHeight(elements.magnificationBar, scaleLogBar(Math.abs(metrics.magnification), magnificationScale.min, magnificationScale.max));
+  elements.magnificationNote.textContent = `fixed log |m| ${formatScaleRatio(magnificationScale.min)} to ${formatScaleRatio(magnificationScale.max)}`;
 
   elements.apertureBarValue.textContent = formatMillimeters(metrics.apertureDiameterMm);
-  setBarHeight(elements.apertureBar, normalizeRange(metrics.apertureDiameterMm, apertureFloor, apertureCeiling));
-  elements.apertureNote.textContent = `${formatMillimeters(apertureFloor)} to ${formatMillimeters(apertureCeiling)}`;
+  setBarHeight(elements.apertureBar, scaleLogBar(metrics.apertureDiameterMm, apertureScale.min, apertureScale.max));
+  elements.apertureNote.textContent = `fixed log ${formatMillimeters(apertureScale.min)} to ${formatMillimeters(apertureScale.max)}`;
 
   elements.probeBlurBarValue.textContent = formatMillimeters(metrics.probeBlurMm);
-  setBarHeight(elements.probeBlurBar, probeBlurBarLevel);
-  setMarkerBottom(elements.probeBlurThreshold, probeBlurThresholdLevel);
-  elements.probeBlurNote.textContent = `log scale, 0 to ${formatRatio(probeBlurMaxRatio)} of the CoC limit`;
+  setBarHeight(elements.probeBlurBar, scaleLogBar(metrics.probeBlurMm, probeBlurScale.min, probeBlurScale.max));
+  setMarkerBottom(elements.probeBlurThreshold, scaleLogBar(metrics.cocMm, probeBlurScale.min, probeBlurScale.max));
+  elements.probeBlurNote.textContent = `fixed log ${formatMillimeters(probeBlurScale.min)} to ${formatMillimeters(probeBlurScale.max)}`;
 
   elements.totalDofBarValue.textContent = Number.isFinite(metrics.totalDofMm) ? formatDistanceMeters(metrics.totalDofMm / 1000) : "Infinity";
-  setBarHeight(elements.totalDofBar, Number.isFinite(metrics.totalDofMm) ? metrics.totalDofMm / totalDofReference : 1);
-  elements.totalDofNote.textContent = Number.isFinite(metrics.totalDofMm) ? `range 0 to ${formatDistanceMeters(totalDofReference / 1000)}` : "focus is at or beyond hyperfocal";
+  setBarHeight(elements.totalDofBar, Number.isFinite(metrics.totalDofMm) ? scaleLogBar(metrics.totalDofMm, totalDofScale.min, totalDofScale.max) : 1);
+  elements.totalDofNote.textContent = Number.isFinite(metrics.totalDofMm)
+    ? `fixed log ${formatMillimeters(totalDofScale.min)} to ${formatDistanceMeters(totalDofScale.max / 1000)}`
+    : `fixed log to ${formatDistanceMeters(totalDofScale.max / 1000)}`;
 
   elements.hyperfocalBarValue.textContent = formatDistanceMeters(metrics.hyperfocalMm / 1000);
-  setBarHeight(elements.hyperfocalBar, metrics.hyperfocalMm / hyperfocalReference);
-  elements.hyperfocalNote.textContent = `range 0 to ${formatDistanceMeters(hyperfocalReference / 1000)}`;
+  setBarHeight(elements.hyperfocalBar, scaleLogBar(metrics.hyperfocalMm, hyperfocalScale.min, hyperfocalScale.max));
+  elements.hyperfocalNote.textContent = `fixed log ${formatMillimeters(hyperfocalScale.min)} to ${formatDistanceMeters(hyperfocalScale.max / 1000)}`;
 }
 
 function updateZoomDemo(metrics) {
@@ -836,13 +840,13 @@ function updateZoomDemo(metrics) {
   const sensorTrackMaxX = 546;
   const sensorTravel = normalizeRange(metrics.sensorDistanceMm, sensorBounds.min, sensorBounds.max);
   const sensorX = sensorTrackMinX + sensorTravel * (sensorTrackMaxX - sensorTrackMinX);
+  const rearExitSlope = (sensorHalfHeight - rearHalfHeight) / Math.max(sensorTrackMinX - rearX, 1);
+  const projectedSensorHalfHeight = clamp(rearHalfHeight + rearExitSlope * (sensorX - rearX), sensorHalfHeight, 86);
+  const projectedSensorTopY = centerY - projectedSensorHalfHeight;
+  const projectedSensorBottomY = centerY + projectedSensorHalfHeight;
   const cocDisplayMax = Math.max(metrics.probeBlurMm, metrics.cocMm * 1.6, 0.06);
   const cocRadius = mapDemoRadiusMm(metrics.cocMm, cocDisplayMax, 6, 13);
   const probeBlurRadius = mapDemoRadiusMm(metrics.probeBlurMm, cocDisplayMax, 4, 28);
-  const cocLabelX = sensorX - 52;
-  const cocLabelY = Math.max(centerY - Math.max(cocRadius + 22, 34), 96);
-  const blurLabelX = sensorX - 62;
-  const blurLabelY = Math.min(centerY + Math.max(probeBlurRadius + 18, 42), 190);
   const verbose = displayState.verbose;
 
   elements.zoomFrontGroup.setAttribute("cx", frontX.toFixed(1));
@@ -873,34 +877,20 @@ function updateZoomDemo(metrics) {
   elements.zoomSensorDistanceEndTick.setAttribute("x2", sensorX.toFixed(1));
   elements.zoomSensorDistanceText.setAttribute("x", ((lensPlaneX + sensorX) / 2).toFixed(1));
   elements.zoomSensorDistanceText.textContent = verbose ? `s' = ${formatMillimeters(metrics.sensorDistanceMm)}` : `s' ${formatMillimeters(metrics.sensorDistanceMm)}`;
-  elements.zoomBlurLeader.setAttribute("x1", (sensorX - probeBlurRadius * 0.88).toFixed(1));
-  elements.zoomBlurLeader.setAttribute("y1", (centerY + probeBlurRadius * 0.32).toFixed(1));
-  elements.zoomBlurLeader.setAttribute("x2", (blurLabelX - 8).toFixed(1));
-  elements.zoomBlurLeader.setAttribute("y2", (blurLabelY - 4).toFixed(1));
-  elements.zoomBlurText.setAttribute("x", blurLabelX.toFixed(1));
-  elements.zoomBlurText.setAttribute("y", blurLabelY.toFixed(1));
-  elements.zoomBlurText.textContent = verbose ? `blur ${formatMillimeters(metrics.probeBlurMm)}` : "blur";
   elements.zoomProbeBlurDisc.setAttribute("cx", sensorX.toFixed(1));
   elements.zoomProbeBlurDisc.setAttribute("cy", centerY.toFixed(1));
   elements.zoomProbeBlurDisc.setAttribute("r", probeBlurRadius.toFixed(1));
-  elements.zoomCocLeader.setAttribute("x1", (sensorX - cocRadius * 0.72).toFixed(1));
-  elements.zoomCocLeader.setAttribute("y1", (centerY - cocRadius * 0.72).toFixed(1));
-  elements.zoomCocLeader.setAttribute("x2", (cocLabelX - 8).toFixed(1));
-  elements.zoomCocLeader.setAttribute("y2", (cocLabelY - 4).toFixed(1));
   elements.zoomCocRing.setAttribute("cx", sensorX.toFixed(1));
   elements.zoomCocRing.setAttribute("cy", centerY.toFixed(1));
   elements.zoomCocRing.setAttribute("r", cocRadius.toFixed(1));
-  elements.zoomCocText.setAttribute("x", cocLabelX.toFixed(1));
-  elements.zoomCocText.setAttribute("y", cocLabelY.toFixed(1));
-  elements.zoomCocText.textContent = verbose ? `CoC ${formatMillimeters(metrics.cocMm)}` : "CoC";
 
   const cone = [
     { x: sceneX, y: centerY - sceneHalfHeight },
     { x: frontX - 12, y: centerY - frontHalfHeight },
     { x: middleX, y: centerY - middleHalfHeight },
     { x: rearX, y: centerY - rearHalfHeight },
-    { x: sensorX, y: centerY - sensorHalfHeight },
-    { x: sensorX, y: centerY + sensorHalfHeight },
+    { x: sensorX, y: projectedSensorTopY },
+    { x: sensorX, y: projectedSensorBottomY },
     { x: rearX, y: centerY + rearHalfHeight },
     { x: middleX, y: centerY + middleHalfHeight },
     { x: frontX - 12, y: centerY + frontHalfHeight },
@@ -910,7 +900,7 @@ function updateZoomDemo(metrics) {
     { x: frontX - 10, y: centerY - sceneHalfHeight * 0.72 },
     { x: middleX, y: centerY - (sensorHalfHeight + 18 + zoom * 12) },
     { x: rearX, y: centerY - (sensorHalfHeight + 8) },
-    { x: sensorX, y: centerY - sensorHalfHeight },
+    { x: sensorX, y: projectedSensorTopY },
   ];
   const midRay = [
     { x: sceneX, y: centerY },
@@ -924,7 +914,7 @@ function updateZoomDemo(metrics) {
     { x: frontX - 10, y: centerY + sceneHalfHeight * 0.72 },
     { x: middleX, y: centerY + (sensorHalfHeight + 18 + zoom * 12) },
     { x: rearX, y: centerY + (sensorHalfHeight + 8) },
-    { x: sensorX, y: centerY + sensorHalfHeight },
+    { x: sensorX, y: projectedSensorBottomY },
   ];
 
   elements.zoomFieldCone.setAttribute("d", svgPath(cone, true));
@@ -972,7 +962,7 @@ function updateDerivedMetrics() {
   elements.farDofValue.textContent = Number.isFinite(dof.far) ? formatDistanceMeters(dof.far / 1000) : "Infinity";
   elements.totalDofValue.textContent = Number.isFinite(dof.total) ? formatDistanceMeters(dof.total / 1000) : "Infinity";
   elements.summaryText.textContent = displayState.verbose
-    ? `${state.focalLength.toFixed(0)} mm | focus ${formatDistanceMeters(state.focusDistance)} | sensor ${formatMillimeters(sensorDistance)} | blur @ ${formatDistanceMeters(state.probeDistance)} = ${formatMillimeters(probeBlur)} | DOF ${Number.isFinite(dof.total) ? formatDistanceMeters(dof.total / 1000) : "Infinity"}`
+    ? `f ${state.focalLength.toFixed(0)} mm | s ${formatDistanceMeters(state.focusDistance)} | s' ${formatMillimeters(sensorDistance)} | c(z) ${formatMillimeters(probeBlur)} | DOF ${Number.isFinite(dof.total) ? formatDistanceMeters(dof.total / 1000) : "Infinity"}`
     : `${state.focalLength.toFixed(0)} mm | ${formatDistanceMeters(state.focusDistance)} | s' ${formatMillimeters(sensorDistance)} | DOF ${Number.isFinite(dof.total) ? formatDistanceMeters(dof.total / 1000) : "Infinity"}`;
 
   return metrics;
@@ -1017,7 +1007,7 @@ function updateHelpText(metrics) {
   setHelp(helpTargets.totalDofBar, helpText("Total depth of field.", hyperfocalEquation, nearEquation, farEquation, totalEquation));
   setHelp(helpTargets.hyperfocalBar, helpText("Hyperfocal distance H.", "This is the focus distance that pushes the far DOF limit to Infinity.", hyperfocalEquation));
 
-  setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, `The moving sensor plane and dimension line show s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, `The amber ring marks the CoC threshold c = ${formatMillimeters(metrics.cocMm)} and the filled disc shows the current probe blur.`, "Approximate field slice: 2 * atan(sensor_half / f)."));
+  setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, `The moving sensor plane and dimension line show s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, "The rear rays keep a fixed exit angle, so moving the sensor crops a different slice of the projected image.", `The amber ring marks the CoC threshold c = ${formatMillimeters(metrics.cocMm)} and the filled disc shows the current probe blur.`, "Approximate field slice: 2 * atan(sensor_half / f)."));
   setHelp([helpTargets.imageChartCard, elements.imageChart], helpText("Image distance chart.", "Y-axis equation: s' = f s / (s - f).", "The focus marker shows the currently selected subject distance s."));
   setHelp([helpTargets.magnificationChartCard, elements.magnificationChart], helpText("Magnification chart.", "Y-axis equation: |m| = |-s' / s|.", "The bar values keep the sign, but the plot shows magnitude only."));
   setHelp([helpTargets.blurChartCard, elements.blurChart], helpText("Blur and depth-of-field chart.", "Blur equation: c(z) = D |s'_focus - z'| / z', with z' = f z / (z - f).", "The shaded region is where c(z) <= CoC.", `Current CoC threshold: ${formatMillimeters(metrics.cocMm)}.`));
@@ -1152,6 +1142,7 @@ function syncControls() {
   elements.sensorDistanceDisplay.textContent = formatMillimeters(sensorDistance);
   elements.focusDistanceRange.value = unmapLogSlider(state.focusDistance, minDistance, DISTANCE_MAX_METERS).toFixed(0);
   elements.focusDistanceNumber.min = minDistance.toFixed(2);
+  elements.focusDistanceNumber.max = DISTANCE_MAX_METERS.toFixed(0);
   elements.focusDistanceNumber.value = state.focusDistance.toFixed(2);
   elements.focusDistanceDisplay.textContent = formatDistanceMeters(state.focusDistance);
   elements.fNumberRange.value = state.fNumber.toFixed(1);
@@ -1162,6 +1153,7 @@ function syncControls() {
   elements.cocDisplay.textContent = formatMillimeters(state.coc);
   elements.probeDistanceRange.value = unmapLogSlider(state.probeDistance, minDistance, DISTANCE_MAX_METERS).toFixed(0);
   elements.probeDistanceNumber.min = minDistance.toFixed(2);
+  elements.probeDistanceNumber.max = DISTANCE_MAX_METERS.toFixed(0);
   elements.probeDistanceNumber.value = state.probeDistance.toFixed(2);
   elements.probeDistanceDisplay.textContent = formatDistanceMeters(state.probeDistance);
   syncPresetButtons();
@@ -1231,9 +1223,9 @@ function bindDisplayRange(rangeElement, key, min, max, step = 1) {
   });
 }
 
-bindLinearPair(elements.focalLengthRange, elements.focalLengthNumber, "focalLength", 4, 300);
-bindLinearPair(elements.fNumberRange, elements.fNumberNumber, "fNumber", 1.2, 22);
-bindLinearPair(elements.cocRange, elements.cocNumber, "coc", 0.005, 0.06);
+bindLinearPair(elements.focalLengthRange, elements.focalLengthNumber, "focalLength", FOCAL_LENGTH_MIN_MM, FOCAL_LENGTH_MAX_MM);
+bindLinearPair(elements.fNumberRange, elements.fNumberNumber, "fNumber", F_NUMBER_MIN, F_NUMBER_MAX);
+bindLinearPair(elements.cocRange, elements.cocNumber, "coc", COC_MIN_MM, COC_MAX_MM);
 bindSensorDistancePair(elements.sensorDistanceRange, elements.sensorDistanceNumber);
 bindDistancePair(elements.focusDistanceRange, elements.focusDistanceNumber, "focusDistance");
 bindDistancePair(elements.probeDistanceRange, elements.probeDistanceNumber, "probeDistance");
