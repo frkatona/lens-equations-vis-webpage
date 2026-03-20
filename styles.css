@@ -471,7 +471,7 @@ h3 {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.75rem;
   margin-top: 0.85rem;
 }
@@ -780,9 +780,41 @@ input[type="number"] {
   stroke-width: 2;
 }
 
+#zoomLensDemo .lens-plane {
+  stroke: rgba(27, 42, 50, 0.28);
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+}
+
 #zoomLensDemo .sensor-plane {
   stroke: rgba(93, 88, 120, 0.9);
   stroke-width: 5;
+}
+
+#zoomLensDemo .dimension-guide {
+  stroke: rgba(27, 42, 50, 0.18);
+  stroke-width: 1.6;
+  stroke-dasharray: 4 5;
+}
+
+#zoomLensDemo .dimension-line,
+#zoomLensDemo .dimension-tick {
+  stroke: rgba(140, 63, 25, 0.86);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+#zoomLensDemo .probe-blur-disc {
+  fill: rgba(140, 63, 25, 0.22);
+  stroke: rgba(140, 63, 25, 0.24);
+  stroke-width: 1.5;
+}
+
+#zoomLensDemo .coc-ring {
+  fill: none;
+  stroke: rgba(194, 106, 44, 0.96);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 5;
 }
 
 .zoom-scale {

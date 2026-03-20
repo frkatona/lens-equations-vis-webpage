@@ -1,10 +1,8 @@
 const DISTANCE_MAX_METERS = 100;
 const SAMPLE_COUNT = 220;
 const BLUR_SAMPLE_COUNT = 260;
-const DISTANCE_MARGIN_METERS = 0.05;
-const DISTANCE_FLOOR_METERS = 0.18;
-const HYPERFOCAL_REFERENCE_MM = 250000;
-const PROBE_BLUR_MAX_COC_RATIO = 250;
+const DISTANCE_MARGIN_METERS = 0.01;
+const DISTANCE_FLOOR_METERS = 0.05;
 const DISPLAY_STORAGE_KEY = "lens-equations-display";
 const DISPLAY_THEMES = ["sand", "slate", "forest"];
 const DISPLAY_DEFAULTS = Object.freeze({
@@ -43,6 +41,9 @@ const elements = {
   focalLengthRange: document.getElementById("focalLengthRange"),
   focalLengthNumber: document.getElementById("focalLengthNumber"),
   focalLengthDisplay: document.getElementById("focalLengthDisplay"),
+  sensorDistanceRange: document.getElementById("sensorDistanceRange"),
+  sensorDistanceNumber: document.getElementById("sensorDistanceNumber"),
+  sensorDistanceDisplay: document.getElementById("sensorDistanceDisplay"),
   focusDistanceRange: document.getElementById("focusDistanceRange"),
   focusDistanceNumber: document.getElementById("focusDistanceNumber"),
   focusDistanceDisplay: document.getElementById("focusDistanceDisplay"),
@@ -81,10 +82,22 @@ const elements = {
   zoomStateLabel: document.getElementById("zoomStateLabel"),
   zoomFocalValue: document.getElementById("zoomFocalValue"),
   zoomFieldText: document.getElementById("zoomFieldText"),
+  zoomSensorLabel: document.getElementById("zoomSensorLabel"),
   zoomFrontGroup: document.getElementById("zoomFrontGroup"),
   zoomMiddleGroup: document.getElementById("zoomMiddleGroup"),
   zoomRearGroup: document.getElementById("zoomRearGroup"),
   zoomIris: document.getElementById("zoomIris"),
+  zoomLensPlane: document.getElementById("zoomLensPlane"),
+  zoomSensorPlane: document.getElementById("zoomSensorPlane"),
+  zoomSensorDistanceGuideStart: document.getElementById("zoomSensorDistanceGuideStart"),
+  zoomSensorDistanceGuideEnd: document.getElementById("zoomSensorDistanceGuideEnd"),
+  zoomSensorDistanceLine: document.getElementById("zoomSensorDistanceLine"),
+  zoomSensorDistanceStartTick: document.getElementById("zoomSensorDistanceStartTick"),
+  zoomSensorDistanceEndTick: document.getElementById("zoomSensorDistanceEndTick"),
+  zoomSensorDistanceText: document.getElementById("zoomSensorDistanceText"),
+  zoomProbeBlurDisc: document.getElementById("zoomProbeBlurDisc"),
+  zoomCocRing: document.getElementById("zoomCocRing"),
+  zoomCocText: document.getElementById("zoomCocText"),
   zoomFieldCone: document.getElementById("zoomFieldCone"),
   zoomRayTop: document.getElementById("zoomRayTop"),
   zoomRayMid: document.getElementById("zoomRayMid"),
@@ -106,6 +119,7 @@ const helpTargets = {
   blurGroup: elements.blurStrengthRange.closest(".drawer-group"),
   radiusGroup: elements.radiusRange.closest(".drawer-group"),
   focalLengthControl: elements.focalLengthRange.closest(".control"),
+  sensorDistanceControl: elements.sensorDistanceRange.closest(".control"),
   focusDistanceControl: elements.focusDistanceRange.closest(".control"),
   fNumberControl: elements.fNumberRange.closest(".control"),
   cocControl: elements.cocRange.closest(".control"),
@@ -181,8 +195,12 @@ function setHelp(targets, text) {
   });
 }
 
+function distanceMinMetersForFocalLength(focalLengthMm) {
+  return Math.max(DISTANCE_FLOOR_METERS, focalLengthMm / 1000 + DISTANCE_MARGIN_METERS);
+}
+
 function distanceMinMeters() {
-  return Math.max(DISTANCE_FLOOR_METERS, state.focalLength / 1000 + DISTANCE_MARGIN_METERS);
+  return distanceMinMetersForFocalLength(state.focalLength);
 }
 
 function mapLogSlider(sliderValue, min, max) {
@@ -205,6 +223,13 @@ function imageDistanceMm(focalLengthMm, subjectDistanceMm) {
     return Number.POSITIVE_INFINITY;
   }
   return (focalLengthMm * subjectDistanceMm) / (subjectDistanceMm - focalLengthMm);
+}
+
+function subjectDistanceMmFromImageDistanceMm(focalLengthMm, imageDistanceMmValue) {
+  if (imageDistanceMmValue <= focalLengthMm) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return (focalLengthMm * imageDistanceMmValue) / (imageDistanceMmValue - focalLengthMm);
 }
 
 function magnification(focalLengthMm, subjectDistanceMm) {
@@ -276,6 +301,16 @@ function formatPixels(value) {
   return `${value.toFixed(0)} px`;
 }
 
+function formatInputMillimeters(value) {
+  if (Math.abs(value) < 10) {
+    return value.toFixed(3);
+  }
+  if (Math.abs(value) < 100) {
+    return value.toFixed(2);
+  }
+  return value.toFixed(1);
+}
+
 function formatRatioMagnitude(value) {
   return `${Math.abs(value).toFixed(Math.abs(value) < 0.1 ? 3 : 2)}x`;
 }
@@ -311,13 +346,16 @@ function makeLinearTicks(min, max, tickCount = 5) {
   for (let value = start; value <= max + step * 0.5; value += step) {
     ticks.push(Number.parseFloat(value.toFixed(10)));
   }
-  if (ticks.length === 0) {
-    ticks.push(min, max);
+  if (ticks.length < 2) {
+    return Array.from(new Set([min, max].map((value) => Number.parseFloat(value.toFixed(10))))).sort((a, b) => a - b);
   }
   return ticks;
 }
 
-function makeDistanceTicks(min, max) {
+function makeDistanceTicks(min, max, targetCount = 5) {
+  if (max / min < 1.8) {
+    return makeLinearTicks(min, max, targetCount - 1);
+  }
   const ticks = [];
   const minPower = Math.floor(Math.log10(min));
   const maxPower = Math.ceil(Math.log10(max));
@@ -331,7 +369,16 @@ function makeDistanceTicks(min, max) {
       }
     });
   }
-  return ticks.filter((value, index, list) => index === 0 || value / list[index - 1] > 1.28);
+  const filtered = ticks.filter((value, index, list) => index === 0 || value / list[index - 1] > 1.28);
+  if (filtered.length >= 3) {
+    return filtered;
+  }
+  const geometricTicks = [];
+  for (let index = 0; index < targetCount; index += 1) {
+    const t = targetCount === 1 ? 0 : index / (targetCount - 1);
+    geometricTicks.push(min * Math.pow(max / min, t));
+  }
+  return geometricTicks.map((value) => Number.parseFloat(value.toFixed(10)));
 }
 
 function percentile(values, ratio) {
@@ -358,6 +405,69 @@ function prepareCanvas(canvas) {
   return { ctx, width: rect.width, height: rect.height };
 }
 
+function chartFrameBox(width, height) {
+  const left = 74;
+  const right = 18;
+  const top = 18;
+  const bottom = 56;
+  return {
+    left,
+    right,
+    top,
+    bottom,
+    plotWidth: Math.max(width - left - right, 10),
+    plotHeight: Math.max(height - top - bottom, 10),
+  };
+}
+
+function filterTicksBySpacing(ticks, mapTick, minSpacing) {
+  if (ticks.length <= 2) {
+    return ticks;
+  }
+  const filtered = [];
+  let lastPx = Number.NaN;
+  ticks.forEach((tick) => {
+    const px = mapTick(tick);
+    if (!filtered.length || Math.abs(px - lastPx) >= minSpacing) {
+      filtered.push(tick);
+      lastPx = px;
+    }
+  });
+  const lastTick = ticks[ticks.length - 1];
+  if (filtered[filtered.length - 1] !== lastTick) {
+    const lastPx = mapTick(lastTick);
+    const priorPx = mapTick(filtered[filtered.length - 1]);
+    if (Math.abs(lastPx - priorPx) >= minSpacing * 0.7) {
+      filtered.push(lastTick);
+    }
+  }
+  return filtered;
+}
+
+function normalizeRange(value, min, max) {
+  if (!Number.isFinite(value) || max <= min) {
+    return 1;
+  }
+  return clamp((value - min) / (max - min), 0, 1);
+}
+
+function niceUpperBound(value, minimum = 1, tickCount = 4, headroom = 1.1) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return minimum;
+  }
+  const expanded = Math.max(minimum, value * headroom);
+  const step = niceStep(0, expanded, tickCount);
+  return Math.max(minimum, Math.ceil(expanded / step) * step);
+}
+
+function sensorDistanceBoundsMm(focalLengthMm) {
+  const minFocusDistanceMm = distanceMinMetersForFocalLength(focalLengthMm) * 1000;
+  return {
+    min: imageDistanceMm(focalLengthMm, DISTANCE_MAX_METERS * 1000),
+    max: imageDistanceMm(focalLengthMm, minFocusDistanceMm),
+  };
+}
+
 function roundRectPath(ctx, x, y, width, height, radius) {
   const r = Math.min(radius, width / 2, height / 2);
   ctx.beginPath();
@@ -380,19 +490,16 @@ function drawPanelBackground(ctx, width, height, palette) {
   ctx.stroke();
 }
 
-function drawChartFrame(ctx, width, height, yTicks, xTicks, mapX, mapY, yFormatter, xFormatter, yLabel, palette) {
-  const left = 58;
-  const right = 16;
-  const top = 16;
-  const bottom = 34;
-  const plotWidth = width - left - right;
-  const plotHeight = height - top - bottom;
+function drawChartFrame(ctx, width, height, yTicks, xTicks, mapX, mapY, yFormatter, xFormatter, yLabel, palette, xLabel = "subject distance s") {
+  const { left, right, top, bottom, plotWidth, plotHeight } = chartFrameBox(width, height);
+  const visibleXTicks = filterTicksBySpacing(xTicks, mapX, 62);
+  const visibleYTicks = filterTicksBySpacing(yTicks, mapY, 28);
   drawPanelBackground(ctx, width, height, palette);
   ctx.save();
   ctx.beginPath();
   ctx.rect(left, top, plotWidth, plotHeight);
   ctx.clip();
-  yTicks.forEach((tick) => {
+  visibleYTicks.forEach((tick) => {
     const y = mapY(tick);
     ctx.strokeStyle = hexToRgba(palette.ink, 0.08);
     ctx.lineWidth = 1;
@@ -401,7 +508,7 @@ function drawChartFrame(ctx, width, height, yTicks, xTicks, mapX, mapY, yFormatt
     ctx.lineTo(width - right, y);
     ctx.stroke();
   });
-  xTicks.forEach((tick) => {
+  visibleXTicks.forEach((tick) => {
     const x = mapX(tick);
     ctx.strokeStyle = hexToRgba(palette.ink, 0.06);
     ctx.lineWidth = 1;
@@ -422,20 +529,20 @@ function drawChartFrame(ctx, width, height, yTicks, xTicks, mapX, mapY, yFormatt
   ctx.font = '12px "Avenir Next", "Trebuchet MS", sans-serif';
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  yTicks.forEach((tick) => ctx.fillText(yFormatter(tick), left - 10, mapY(tick)));
+  visibleYTicks.forEach((tick) => ctx.fillText(yFormatter(tick), left - 12, mapY(tick)));
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  xTicks.forEach((tick) => ctx.fillText(xFormatter(tick), mapX(tick), height - bottom + 8));
+  visibleXTicks.forEach((tick) => ctx.fillText(xFormatter(tick), mapX(tick), height - bottom + 10));
   ctx.save();
-  ctx.translate(16, height / 2);
+  ctx.translate(22, top + plotHeight / 2);
   ctx.rotate(-Math.PI / 2);
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.fillText(yLabel, 0, 0);
   ctx.restore();
-  ctx.textAlign = "right";
+  ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
-  ctx.fillText("subject distance", width - right, height - 6);
+  ctx.fillText(xLabel, left + plotWidth / 2, height - 12);
   return { left, right, top, bottom, plotWidth, plotHeight };
 }
 
@@ -483,6 +590,7 @@ function drawImageChart(metrics) {
   const palette = readVisualPalette();
   const minDistance = distanceMinMeters();
   const maxDistance = DISTANCE_MAX_METERS;
+  const frame = chartFrameBox(width, height);
   const points = [];
   for (let index = 0; index < SAMPLE_COUNT; index += 1) {
     const t = index / (SAMPLE_COUNT - 1);
@@ -494,17 +602,11 @@ function drawImageChart(metrics) {
   const xTicks = makeDistanceTicks(minDistance, maxDistance);
   const yTicks = makeLinearTicks(yMin, yMax, 5);
   const xToPx = (value) => {
-    const left = 58;
-    const right = 16;
-    const plotWidth = width - left - right;
     const position = Math.log(value / minDistance) / Math.log(maxDistance / minDistance);
-    return left + position * plotWidth;
+    return frame.left + position * frame.plotWidth;
   };
   const yToPx = (value) => {
-    const top = 16;
-    const bottom = 34;
-    const plotHeight = height - top - bottom;
-    return height - bottom - ((value - yMin) / (yMax - yMin)) * plotHeight;
+    return height - frame.bottom - ((value - yMin) / (yMax - yMin || 1)) * frame.plotHeight;
   };
   drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 100 ? 1 : 0)} mm`, (tick) => formatDistanceMeters(tick), "image distance s'", palette);
   drawSeries(ctx, points, xToPx, yToPx, palette.amber, 3);
@@ -516,6 +618,7 @@ function drawMagnificationChart(metrics) {
   const palette = readVisualPalette();
   const minDistance = distanceMinMeters();
   const maxDistance = DISTANCE_MAX_METERS;
+  const frame = chartFrameBox(width, height);
   const points = [];
   for (let index = 0; index < SAMPLE_COUNT; index += 1) {
     const t = index / (SAMPLE_COUNT - 1);
@@ -528,17 +631,11 @@ function drawMagnificationChart(metrics) {
   const xTicks = makeDistanceTicks(minDistance, maxDistance);
   const yTicks = makeLinearTicks(yMin, yMax, 5);
   const xToPx = (value) => {
-    const left = 58;
-    const right = 16;
-    const plotWidth = width - left - right;
     const position = Math.log(value / minDistance) / Math.log(maxDistance / minDistance);
-    return left + position * plotWidth;
+    return frame.left + position * frame.plotWidth;
   };
   const yToPx = (value) => {
-    const top = 16;
-    const bottom = 34;
-    const plotHeight = height - top - bottom;
-    return height - bottom - ((value - yMin) / (yMax - yMin || 1)) * plotHeight;
+    return height - frame.bottom - ((value - yMin) / (yMax - yMin || 1)) * frame.plotHeight;
   };
   drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 1 ? 2 : 1)}x`, (tick) => formatDistanceMeters(tick), "|m|", palette);
   drawSeries(ctx, points, xToPx, yToPx, palette.teal, 3);
@@ -555,6 +652,7 @@ function drawBlurChart(metrics) {
   const probeMaxBound = Math.max(metrics.focusDistanceMeters, metrics.probeDistanceMeters) * 1.18;
   const minDistance = Math.max(baseMin, Math.min(nearBound, probeMinBound));
   const maxDistance = Math.min(DISTANCE_MAX_METERS, Math.max(farBound, probeMaxBound, minDistance * 1.6));
+  const layout = chartFrameBox(width, height);
   const points = [];
   for (let index = 0; index < BLUR_SAMPLE_COUNT; index += 1) {
     const t = index / (BLUR_SAMPLE_COUNT - 1);
@@ -571,17 +669,11 @@ function drawBlurChart(metrics) {
   const xTicks = makeDistanceTicks(minDistance, maxDistance);
   const yTicks = makeLinearTicks(yMin, yMax, 5);
   const xToPx = (value) => {
-    const left = 58;
-    const right = 16;
-    const plotWidth = width - left - right;
     const position = Math.log(value / minDistance) / Math.log(maxDistance / minDistance);
-    return left + position * plotWidth;
+    return layout.left + position * layout.plotWidth;
   };
   const yToPx = (value) => {
-    const top = 16;
-    const bottom = 34;
-    const plotHeight = height - top - bottom;
-    return height - bottom - ((value - yMin) / (yMax - yMin || 1)) * plotHeight;
+    return height - layout.bottom - ((value - yMin) / (yMax - yMin || 1)) * layout.plotHeight;
   };
   const frame = drawChartFrame(ctx, width, height, yTicks, xTicks, xToPx, yToPx, (tick) => `${tick.toFixed(tick < 0.1 ? 3 : 2)} mm`, (tick) => formatDistanceMeters(tick), "blur circle c(z)", palette);
   ctx.save();
@@ -630,7 +722,7 @@ function setMarkerBottom(element, ratio) {
   element.style.bottom = `${(clamp(ratio, 0, 1) * 100).toFixed(1)}%`;
 }
 
-function scaleRelativeLog(relativeValue, maxRelative = PROBE_BLUR_MAX_COC_RATIO) {
+function scaleRelativeLog(relativeValue, maxRelative = 4) {
   if (!Number.isFinite(relativeValue) || relativeValue <= 0) {
     return 0;
   }
@@ -652,6 +744,16 @@ function normalizeZoom(focalLengthMm) {
   return clamp((Math.log(focalLengthMm) - Math.log(min)) / (Math.log(max) - Math.log(min)), 0, 1);
 }
 
+function mapDemoRadiusMm(valueMm, maxValueMm, minRadiusPx, maxRadiusPx) {
+  if (!Number.isFinite(valueMm) || valueMm <= 0) {
+    return minRadiusPx;
+  }
+  const floor = 0.003;
+  const ceiling = Math.max(maxValueMm, floor * 2);
+  const position = Math.log10(1 + valueMm / floor) / Math.log10(1 + ceiling / floor);
+  return minRadiusPx + position * (maxRadiusPx - minRadiusPx);
+}
+
 function zoomDescriptor(focalLengthMm) {
   if (focalLengthMm < 24) {
     return "Wide coverage";
@@ -667,45 +769,51 @@ function zoomDescriptor(focalLengthMm) {
 
 function updateOutputBars(metrics) {
   const closeFocusDistanceMm = distanceMinMeters() * 1000;
-  const imageDistanceCeiling = imageDistanceMm(metrics.focalLengthMm, closeFocusDistanceMm);
-  const magnificationCeiling = Math.abs(magnification(metrics.focalLengthMm, closeFocusDistanceMm));
+  const workingReferenceDistanceMm = Math.sqrt(closeFocusDistanceMm * metrics.focusDistanceMm);
+  const imageDistanceFloor = imageDistanceMm(metrics.focalLengthMm, DISTANCE_MAX_METERS * 1000);
+  const imageDistanceCeiling = niceUpperBound(imageDistanceMm(metrics.focalLengthMm, workingReferenceDistanceMm), metrics.focalLengthMm * 1.05, 4, 1.04);
+  const magnificationCeiling = niceUpperBound(Math.abs(magnification(metrics.focalLengthMm, workingReferenceDistanceMm)), 0.1, 4, 1.05);
+  const apertureFloor = apertureDiameterMm(metrics.focalLengthMm, 22);
   const apertureCeiling = apertureDiameterMm(metrics.focalLengthMm, 1.2);
-  const totalDofReference = Number.isFinite(metrics.totalDofMm) ? Math.max(metrics.focusDistanceMm, metrics.totalDofMm * 1.25, 250) : metrics.focusDistanceMm * 2;
+  const totalDofReference = Number.isFinite(metrics.totalDofMm)
+    ? niceUpperBound(Math.max(metrics.totalDofMm, metrics.focusDistanceMm * 0.8), 250, 4, 1.12)
+    : niceUpperBound(metrics.focusDistanceMm * 2, metrics.focusDistanceMm * 2, 4, 1.1);
+  const hyperfocalReference = niceUpperBound(metrics.hyperfocalMm, Math.max(metrics.focusDistanceMm * 1.5, 1000), 4, 1.1);
   const probeBlurRatio = metrics.probeBlurMm / metrics.cocMm;
-  const probeBlurBarLevel = scaleRelativeLog(probeBlurRatio);
-  const probeBlurThresholdLevel = scaleRelativeLog(1);
+  const probeBlurMaxRatio = niceUpperBound(Math.max(probeBlurRatio, 1), 4, 4, 1.15);
+  const probeBlurBarLevel = scaleRelativeLog(probeBlurRatio, probeBlurMaxRatio);
+  const probeBlurThresholdLevel = scaleRelativeLog(1, probeBlurMaxRatio);
 
   elements.imageDistanceBarValue.textContent = formatMillimeters(metrics.imageDistanceMm);
-  setBarHeight(elements.imageDistanceBar, metrics.imageDistanceMm / imageDistanceCeiling);
-  elements.imageDistanceNote.textContent = `close-focus ceiling ${formatMillimeters(imageDistanceCeiling)}`;
+  setBarHeight(elements.imageDistanceBar, normalizeRange(metrics.imageDistanceMm, imageDistanceFloor, imageDistanceCeiling));
+  elements.imageDistanceNote.textContent = `${formatMillimeters(imageDistanceFloor)} to ${formatMillimeters(imageDistanceCeiling)}`;
 
   elements.magnificationBarValue.textContent = formatMagnification(metrics.magnification);
   setBarHeight(elements.magnificationBar, Math.abs(metrics.magnification) / magnificationCeiling);
-  elements.magnificationNote.textContent = `bar uses |m| up to ${formatRatioMagnitude(-magnificationCeiling)}`;
+  elements.magnificationNote.textContent = `range 0 to ${formatRatioMagnitude(-magnificationCeiling)}`;
 
   elements.apertureBarValue.textContent = formatMillimeters(metrics.apertureDiameterMm);
-  setBarHeight(elements.apertureBar, metrics.apertureDiameterMm / apertureCeiling);
-  elements.apertureNote.textContent = `full-open reference ${formatMillimeters(apertureCeiling)}`;
+  setBarHeight(elements.apertureBar, normalizeRange(metrics.apertureDiameterMm, apertureFloor, apertureCeiling));
+  elements.apertureNote.textContent = `${formatMillimeters(apertureFloor)} to ${formatMillimeters(apertureCeiling)}`;
 
   elements.probeBlurBarValue.textContent = formatMillimeters(metrics.probeBlurMm);
   setBarHeight(elements.probeBlurBar, probeBlurBarLevel);
   setMarkerBottom(elements.probeBlurThreshold, probeBlurThresholdLevel);
-  elements.probeBlurNote.textContent = `log scale, blur is ${formatRatio(probeBlurRatio)} of the CoC limit`;
+  elements.probeBlurNote.textContent = `log scale, 0 to ${formatRatio(probeBlurMaxRatio)} of the CoC limit`;
 
   elements.totalDofBarValue.textContent = Number.isFinite(metrics.totalDofMm) ? formatDistanceMeters(metrics.totalDofMm / 1000) : "Infinity";
   setBarHeight(elements.totalDofBar, Number.isFinite(metrics.totalDofMm) ? metrics.totalDofMm / totalDofReference : 1);
-  elements.totalDofNote.textContent = Number.isFinite(metrics.totalDofMm) ? `reference span ${formatDistanceMeters(totalDofReference / 1000)}` : "focus is at or beyond hyperfocal";
+  elements.totalDofNote.textContent = Number.isFinite(metrics.totalDofMm) ? `range 0 to ${formatDistanceMeters(totalDofReference / 1000)}` : "focus is at or beyond hyperfocal";
 
   elements.hyperfocalBarValue.textContent = formatDistanceMeters(metrics.hyperfocalMm / 1000);
-  setBarHeight(elements.hyperfocalBar, metrics.hyperfocalMm / HYPERFOCAL_REFERENCE_MM);
-  elements.hyperfocalNote.textContent = `reference ceiling ${formatDistanceMeters(HYPERFOCAL_REFERENCE_MM / 1000)}`;
+  setBarHeight(elements.hyperfocalBar, metrics.hyperfocalMm / hyperfocalReference);
+  elements.hyperfocalNote.textContent = `range 0 to ${formatDistanceMeters(hyperfocalReference / 1000)}`;
 }
 
 function updateZoomDemo(metrics) {
   const zoom = normalizeZoom(metrics.focalLengthMm);
   const centerY = 140;
   const sceneX = 78;
-  const sensorX = 514;
   const frontX = 238 + zoom * 24;
   const middleX = 322 + zoom * 62;
   const rearX = 396 + zoom * 90;
@@ -714,8 +822,18 @@ function updateZoomDemo(metrics) {
   const frontHalfHeight = 48 - zoom * 4;
   const middleHalfHeight = 30 - zoom * 3;
   const rearHalfHeight = 18 - zoom * 2;
+  const rearRadiusX = 14 + zoom * 7;
   const irisRadius = clamp(12 - (metrics.fNumber - 1.2) * 0.4, 5, 12);
   const fieldAngle = (2 * Math.atan(18 / metrics.focalLengthMm) * 180) / Math.PI;
+  const sensorBounds = sensorDistanceBoundsMm(metrics.focalLengthMm);
+  const lensPlaneX = rearX + rearRadiusX + 4;
+  const sensorTrackMinX = lensPlaneX + 18;
+  const sensorTrackMaxX = 546;
+  const sensorTravel = normalizeRange(metrics.sensorDistanceMm, sensorBounds.min, sensorBounds.max);
+  const sensorX = sensorTrackMinX + sensorTravel * (sensorTrackMaxX - sensorTrackMinX);
+  const cocDisplayMax = Math.max(metrics.probeBlurMm, metrics.cocMm * 1.6, 0.06);
+  const cocRadius = mapDemoRadiusMm(metrics.cocMm, cocDisplayMax, 6, 13);
+  const probeBlurRadius = mapDemoRadiusMm(metrics.probeBlurMm, cocDisplayMax, 4, 28);
 
   elements.zoomFrontGroup.setAttribute("cx", frontX.toFixed(1));
   elements.zoomFrontGroup.setAttribute("rx", (18 + zoom * 6).toFixed(1));
@@ -724,10 +842,35 @@ function updateZoomDemo(metrics) {
   elements.zoomMiddleGroup.setAttribute("rx", (16 + zoom * 5).toFixed(1));
   elements.zoomMiddleGroup.setAttribute("ry", (54 - zoom * 4).toFixed(1));
   elements.zoomRearGroup.setAttribute("cx", rearX.toFixed(1));
-  elements.zoomRearGroup.setAttribute("rx", (14 + zoom * 7).toFixed(1));
+  elements.zoomRearGroup.setAttribute("rx", rearRadiusX.toFixed(1));
   elements.zoomRearGroup.setAttribute("ry", (48 - zoom * 3).toFixed(1));
   elements.zoomIris.setAttribute("cx", (350 + zoom * 52).toFixed(1));
   elements.zoomIris.setAttribute("r", irisRadius.toFixed(1));
+  elements.zoomLensPlane.setAttribute("x1", lensPlaneX.toFixed(1));
+  elements.zoomLensPlane.setAttribute("x2", lensPlaneX.toFixed(1));
+  elements.zoomSensorPlane.setAttribute("x1", sensorX.toFixed(1));
+  elements.zoomSensorPlane.setAttribute("x2", sensorX.toFixed(1));
+  elements.zoomSensorLabel.setAttribute("x", (sensorX + 8).toFixed(1));
+  elements.zoomSensorDistanceGuideStart.setAttribute("x1", lensPlaneX.toFixed(1));
+  elements.zoomSensorDistanceGuideStart.setAttribute("x2", lensPlaneX.toFixed(1));
+  elements.zoomSensorDistanceGuideEnd.setAttribute("x1", sensorX.toFixed(1));
+  elements.zoomSensorDistanceGuideEnd.setAttribute("x2", sensorX.toFixed(1));
+  elements.zoomSensorDistanceLine.setAttribute("x1", lensPlaneX.toFixed(1));
+  elements.zoomSensorDistanceLine.setAttribute("x2", sensorX.toFixed(1));
+  elements.zoomSensorDistanceStartTick.setAttribute("x1", lensPlaneX.toFixed(1));
+  elements.zoomSensorDistanceStartTick.setAttribute("x2", lensPlaneX.toFixed(1));
+  elements.zoomSensorDistanceEndTick.setAttribute("x1", sensorX.toFixed(1));
+  elements.zoomSensorDistanceEndTick.setAttribute("x2", sensorX.toFixed(1));
+  elements.zoomSensorDistanceText.setAttribute("x", ((lensPlaneX + sensorX) / 2).toFixed(1));
+  elements.zoomSensorDistanceText.textContent = `s' = ${formatMillimeters(metrics.sensorDistanceMm)}`;
+  elements.zoomProbeBlurDisc.setAttribute("cx", sensorX.toFixed(1));
+  elements.zoomProbeBlurDisc.setAttribute("cy", centerY.toFixed(1));
+  elements.zoomProbeBlurDisc.setAttribute("r", probeBlurRadius.toFixed(1));
+  elements.zoomCocRing.setAttribute("cx", sensorX.toFixed(1));
+  elements.zoomCocRing.setAttribute("cy", centerY.toFixed(1));
+  elements.zoomCocRing.setAttribute("r", cocRadius.toFixed(1));
+  elements.zoomCocText.setAttribute("x", sensorX.toFixed(1));
+  elements.zoomCocText.textContent = `CoC c = ${formatMillimeters(metrics.cocMm)}`;
 
   const cone = [
     { x: sceneX, y: centerY - sceneHalfHeight },
@@ -777,7 +920,7 @@ function updateDerivedMetrics() {
   const focalLengthMm = state.focalLength;
   const focusDistanceMm = state.focusDistance * 1000;
   const probeDistanceMm = state.probeDistance * 1000;
-  const imageDistance = imageDistanceMm(focalLengthMm, focusDistanceMm);
+  const sensorDistance = imageDistanceMm(focalLengthMm, focusDistanceMm);
   const magnificationValue = magnification(focalLengthMm, focusDistanceMm);
   const aperture = apertureDiameterMm(focalLengthMm, state.fNumber);
   const probeBlur = blurDiameterMm(focalLengthMm, state.fNumber, focusDistanceMm, probeDistanceMm);
@@ -790,7 +933,8 @@ function updateDerivedMetrics() {
     probeDistanceMeters: state.probeDistance,
     fNumber: state.fNumber,
     cocMm: state.coc,
-    imageDistanceMm: imageDistance,
+    imageDistanceMm: sensorDistance,
+    sensorDistanceMm: sensorDistance,
     magnification: magnificationValue,
     apertureDiameterMm: aperture,
     probeBlurMm: probeBlur,
@@ -805,7 +949,7 @@ function updateDerivedMetrics() {
   elements.nearDofValue.textContent = formatDistanceMeters(dof.near / 1000);
   elements.farDofValue.textContent = Number.isFinite(dof.far) ? formatDistanceMeters(dof.far / 1000) : "Infinity";
   elements.totalDofValue.textContent = Number.isFinite(dof.total) ? formatDistanceMeters(dof.total / 1000) : "Infinity";
-  elements.summaryText.textContent = `${state.focalLength.toFixed(0)} mm | focus ${formatDistanceMeters(state.focusDistance)} | sensor ${formatMillimeters(imageDistance)} | blur @ ${formatDistanceMeters(state.probeDistance)} = ${formatMillimeters(probeBlur)} | DOF ${Number.isFinite(dof.total) ? formatDistanceMeters(dof.total / 1000) : "Infinity"}`;
+  elements.summaryText.textContent = `${state.focalLength.toFixed(0)} mm | focus ${formatDistanceMeters(state.focusDistance)} | sensor ${formatMillimeters(sensorDistance)} | blur @ ${formatDistanceMeters(state.probeDistance)} = ${formatMillimeters(probeBlur)} | DOF ${Number.isFinite(dof.total) ? formatDistanceMeters(dof.total / 1000) : "Infinity"}`;
 
   return metrics;
 }
@@ -830,6 +974,7 @@ function updateHelpText(metrics) {
   setHelp(helpTargets.radiusGroup, helpText("Corner radius.", `Current shared radius: ${formatPixels(displayState.radius)}.`, "Applies the same rounding to cards, bars, and the drawer."));
 
   setHelp(helpTargets.focalLengthControl, helpText("Focal length f.", `Current f = ${formatMillimeters(metrics.focalLengthMm)}.`, focusEquation, "Longer f usually means tighter framing and larger magnification."));
+  setHelp(helpTargets.sensorDistanceControl, helpText("Sensor distance s'.", `Current s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, focusEquation, "This image-plane distance is locked to the focus distance by the thin-lens equation."));
   setHelp(helpTargets.focusDistanceControl, helpText("Focus distance s.", `Current s = ${formatDistanceMeters(metrics.focusDistanceMeters)}.`, focusEquation, "Subject distance is measured from the lens plane in this thin-lens model."));
   setHelp(helpTargets.fNumberControl, helpText("F-number N.", `Current N = ${formatFNumber(metrics.fNumber)}.`, `Aperture diameter D = f / N = ${formatMillimeters(metrics.apertureDiameterMm)}.`, "Smaller N means a wider opening and usually shallower depth of field."));
   setHelp(helpTargets.cocControl, helpText("Circle of confusion c.", `Current CoC = ${formatMillimeters(metrics.cocMm)}.`, "Depth of field is the span where the blur circle stays at or below this limit.", hyperfocalEquation));
@@ -848,7 +993,7 @@ function updateHelpText(metrics) {
   setHelp(helpTargets.totalDofBar, helpText("Total depth of field.", hyperfocalEquation, nearEquation, farEquation, totalEquation));
   setHelp(helpTargets.hyperfocalBar, helpText("Hyperfocal distance H.", "This is the focus distance that pushes the far DOF limit to Infinity.", hyperfocalEquation));
 
-  setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, "The sketch shows lens groups shifting to change the net optical power.", "Approximate field slice: 2 * atan(sensor_half / f)."));
+  setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, `The moving sensor plane and dimension line show s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, `The amber ring marks the CoC threshold c = ${formatMillimeters(metrics.cocMm)} and the filled disc shows the current probe blur.`, "Approximate field slice: 2 * atan(sensor_half / f)."));
   setHelp([helpTargets.imageChartCard, elements.imageChart], helpText("Image distance chart.", "Y-axis equation: s' = f s / (s - f).", "The focus marker shows the currently selected subject distance s."));
   setHelp([helpTargets.magnificationChartCard, elements.magnificationChart], helpText("Magnification chart.", "Y-axis equation: |m| = |-s' / s|.", "The bar values keep the sign, but the plot shows magnitude only."));
   setHelp([helpTargets.blurChartCard, elements.blurChart], helpText("Blur and depth-of-field chart.", "Blur equation: c(z) = D |s'_focus - z'| / z', with z' = f z / (z - f).", "The shaded region is where c(z) <= CoC.", `Current CoC threshold: ${formatMillimeters(metrics.cocMm)}.`));
@@ -966,11 +1111,18 @@ function syncPresetButtons() {
 
 function syncControls() {
   const minDistance = distanceMinMeters();
+  const sensorBounds = sensorDistanceBoundsMm(state.focalLength);
   state.focusDistance = clamp(state.focusDistance, minDistance, DISTANCE_MAX_METERS);
   state.probeDistance = clamp(state.probeDistance, minDistance, DISTANCE_MAX_METERS);
+  const sensorDistance = imageDistanceMm(state.focalLength, state.focusDistance * 1000);
   elements.focalLengthRange.value = state.focalLength.toFixed(0);
   elements.focalLengthNumber.value = state.focalLength.toFixed(0);
   elements.focalLengthDisplay.textContent = `${state.focalLength.toFixed(0)} mm`;
+  elements.sensorDistanceRange.value = unmapLogSlider(sensorDistance, sensorBounds.min, sensorBounds.max).toFixed(0);
+  elements.sensorDistanceNumber.min = formatInputMillimeters(sensorBounds.min);
+  elements.sensorDistanceNumber.max = formatInputMillimeters(sensorBounds.max);
+  elements.sensorDistanceNumber.value = formatInputMillimeters(sensorDistance);
+  elements.sensorDistanceDisplay.textContent = formatMillimeters(sensorDistance);
   elements.focusDistanceRange.value = unmapLogSlider(state.focusDistance, minDistance, DISTANCE_MAX_METERS).toFixed(0);
   elements.focusDistanceNumber.min = minDistance.toFixed(2);
   elements.focusDistanceNumber.value = state.focusDistance.toFixed(2);
@@ -1023,6 +1175,26 @@ function bindDistancePair(rangeElement, numberElement, key) {
   });
 }
 
+function bindSensorDistancePair(rangeElement, numberElement) {
+  const updateFromSensorDistance = (rawValue) => {
+    const sensorBounds = sensorDistanceBoundsMm(state.focalLength);
+    const sensorDistance = clamp(rawValue, sensorBounds.min, sensorBounds.max);
+    const subjectDistanceMm = subjectDistanceMmFromImageDistanceMm(state.focalLength, sensorDistance);
+    state.focusDistance = clamp(subjectDistanceMm / 1000, distanceMinMeters(), DISTANCE_MAX_METERS);
+    render();
+  };
+
+  rangeElement.addEventListener("input", () => {
+    const sensorBounds = sensorDistanceBoundsMm(state.focalLength);
+    updateFromSensorDistance(mapLogSlider(safeNumber(rangeElement.value, 0), sensorBounds.min, sensorBounds.max));
+  });
+
+  numberElement.addEventListener("input", () => {
+    const currentSensorDistance = imageDistanceMm(state.focalLength, state.focusDistance * 1000);
+    updateFromSensorDistance(safeNumber(numberElement.value, currentSensorDistance));
+  });
+}
+
 function bindDisplayRange(rangeElement, key, min, max, step = 1) {
   rangeElement.addEventListener("input", () => {
     const nextValue = quantize(clamp(safeNumber(rangeElement.value, displayState[key]), min, max), step);
@@ -1035,6 +1207,7 @@ function bindDisplayRange(rangeElement, key, min, max, step = 1) {
 bindLinearPair(elements.focalLengthRange, elements.focalLengthNumber, "focalLength", 4, 300);
 bindLinearPair(elements.fNumberRange, elements.fNumberNumber, "fNumber", 1.2, 22);
 bindLinearPair(elements.cocRange, elements.cocNumber, "coc", 0.005, 0.06);
+bindSensorDistancePair(elements.sensorDistanceRange, elements.sensorDistanceNumber);
 bindDistancePair(elements.focusDistanceRange, elements.focusDistanceNumber, "focusDistance");
 bindDistancePair(elements.probeDistanceRange, elements.probeDistanceNumber, "probeDistance");
 

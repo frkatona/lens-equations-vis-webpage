@@ -199,6 +199,31 @@
 
             <div class="control">
               <div class="control-top">
+                <label for="sensorDistanceRange">Sensor distance s'</label>
+                <output id="sensorDistanceDisplay">88.8 mm</output>
+              </div>
+              <div class="control-inputs">
+                <input
+                  id="sensorDistanceRange"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  step="1"
+                  value="0"
+                />
+                <input
+                  id="sensorDistanceNumber"
+                  type="number"
+                  min="4.00"
+                  max="10000"
+                  step="0.01"
+                  value="88.82"
+                />
+              </div>
+            </div>
+
+            <div class="control">
+              <div class="control-top">
                 <label for="focusDistanceRange">Focus distance s</label>
                 <output id="focusDistanceDisplay">2.00 m</output>
               </div>
@@ -214,7 +239,7 @@
                 <input
                   id="focusDistanceNumber"
                   type="number"
-                  min="0.20"
+                  min="0.05"
                   max="100"
                   step="0.01"
                   value="2.00"
@@ -289,7 +314,7 @@
                 <input
                   id="probeDistanceNumber"
                   type="number"
-                  min="0.20"
+                  min="0.05"
                   max="100"
                   step="0.01"
                   value="3.00"
@@ -455,8 +480,59 @@
               ></ellipse>
               <circle id="zoomIris" class="zoom-iris" cx="360" cy="140" r="8"></circle>
 
-              <line class="sensor-plane" x1="514" y1="72" x2="514" y2="208"></line>
-              <text class="demo-label" x="520" y="88">sensor</text>
+              <line id="zoomLensPlane" class="lens-plane" x1="426" y1="82" x2="426" y2="210"></line>
+              <line
+                id="zoomSensorDistanceGuideStart"
+                class="dimension-guide"
+                x1="426"
+                y1="190"
+                x2="426"
+                y2="232"
+              ></line>
+              <line
+                id="zoomSensorDistanceGuideEnd"
+                class="dimension-guide"
+                x1="514"
+                y1="190"
+                x2="514"
+                y2="232"
+              ></line>
+              <line
+                id="zoomSensorDistanceLine"
+                class="dimension-line"
+                x1="426"
+                y1="224"
+                x2="514"
+                y2="224"
+              ></line>
+              <line
+                id="zoomSensorDistanceStartTick"
+                class="dimension-tick"
+                x1="426"
+                y1="218"
+                x2="426"
+                y2="230"
+              ></line>
+              <line
+                id="zoomSensorDistanceEndTick"
+                class="dimension-tick"
+                x1="514"
+                y1="218"
+                x2="514"
+                y2="230"
+              ></line>
+              <text class="demo-label" id="zoomSensorDistanceText" x="470" y="214" text-anchor="middle">
+                s' = 88.8 mm
+              </text>
+
+              <circle id="zoomProbeBlurDisc" class="probe-blur-disc" cx="514" cy="140" r="14"></circle>
+              <circle id="zoomCocRing" class="coc-ring" cx="514" cy="140" r="7"></circle>
+
+              <line id="zoomSensorPlane" class="sensor-plane" x1="514" y1="72" x2="514" y2="208"></line>
+              <text class="demo-label" id="zoomSensorLabel" x="520" y="88">sensor</text>
+              <text class="demo-label" id="zoomCocText" x="514" y="204" text-anchor="middle">
+                CoC c = 0.030 mm
+              </text>
               <text class="demo-label" x="174" y="66">moving lens groups</text>
               <text class="demo-label" id="zoomFieldText" x="48" y="60">wide field</text>
             </svg>
