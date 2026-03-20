@@ -18,14 +18,17 @@ const BAR_SCALE_LIMITS = Object.freeze({
   hyperfocalMm: { min: 10, max: 20000000 },
 });
 const DISPLAY_STORAGE_KEY = "lens-equations-display";
+const DISPLAY_STORAGE_VERSION = 2;
 const DISPLAY_THEMES = ["sand", "slate", "forest", "midnight", "ember", "aurora"];
 const DISPLAY_DEFAULTS = Object.freeze({
-  theme: "sand",
+  theme: "midnight",
   verbose: false,
   transparency: 20,
   width: 1320,
   blur: 18,
   radius: 26,
+  foregroundDistance: 1.74,
+  backgroundDistance: 6.6,
 });
 
 const presets = {
@@ -38,6 +41,7 @@ const presets = {
 
 const state = { ...presets.portrait };
 const displayState = { ...DISPLAY_DEFAULTS };
+let selectedPresetKey = "portrait";
 
 const elements = {
   displayMenuToggle: document.getElementById("displayMenuToggle"),
@@ -53,6 +57,10 @@ const elements = {
   blurStrengthDisplay: document.getElementById("blurStrengthDisplay"),
   radiusRange: document.getElementById("radiusRange"),
   radiusDisplay: document.getElementById("radiusDisplay"),
+  sceneForegroundRange: document.getElementById("sceneForegroundRange"),
+  sceneForegroundDisplay: document.getElementById("sceneForegroundDisplay"),
+  sceneBackgroundRange: document.getElementById("sceneBackgroundRange"),
+  sceneBackgroundDisplay: document.getElementById("sceneBackgroundDisplay"),
   resetDisplayButton: document.getElementById("resetDisplayButton"),
   focalLengthRange: document.getElementById("focalLengthRange"),
   focalLengthNumber: document.getElementById("focalLengthNumber"),
@@ -120,6 +128,13 @@ const elements = {
   zoomLensDemo: document.getElementById("zoomLensDemo"),
   zoomScaleFill: document.getElementById("zoomScaleFill"),
   zoomScaleThumb: document.getElementById("zoomScaleThumb"),
+  scenePreview: document.getElementById("scenePreview"),
+  sceneBackgroundLayer: document.getElementById("sceneBackgroundLayer"),
+  sceneSubjectLayer: document.getElementById("sceneSubjectLayer"),
+  sceneForegroundLayer: document.getElementById("sceneForegroundLayer"),
+  sceneForegroundDistanceText: document.getElementById("sceneForegroundDistanceText"),
+  sceneSubjectDistanceText: document.getElementById("sceneSubjectDistanceText"),
+  sceneBackgroundDistanceText: document.getElementById("sceneBackgroundDistanceText"),
   imageChart: document.getElementById("imageChart"),
   magnificationChart: document.getElementById("magnificationChart"),
   blurChart: document.getElementById("blurChart"),
@@ -133,6 +148,8 @@ const helpTargets = {
   contentWidthGroup: elements.contentWidthRange.closest(".drawer-group"),
   blurGroup: elements.blurStrengthRange.closest(".drawer-group"),
   radiusGroup: elements.radiusRange.closest(".drawer-group"),
+  sceneForegroundGroup: elements.sceneForegroundRange.closest(".drawer-group"),
+  sceneBackgroundGroup: elements.sceneBackgroundRange.closest(".drawer-group"),
   focalLengthControl: elements.focalLengthRange.closest(".control"),
   sensorDistanceControl: elements.sensorDistanceRange.closest(".control"),
   focusDistanceControl: elements.focusDistanceRange.closest(".control"),
@@ -150,6 +167,7 @@ const helpTargets = {
   totalDofBar: elements.totalDofBarValue.closest(".bar-column"),
   hyperfocalBar: elements.hyperfocalBarValue.closest(".bar-column"),
   zoomDemoCard: document.querySelector(".zoom-demo-card"),
+  sceneCard: document.querySelector(".scene-card"),
   imageChartCard: elements.imageChart.closest(".chart-card"),
   magnificationChartCard: elements.magnificationChart.closest(".chart-card"),
   blurChartCard: elements.blurChart.closest(".chart-card"),
@@ -394,12 +412,7 @@ function makeDistanceTicks(min, max, targetCount = 5) {
   if (filtered.length >= 3) {
     return filtered;
   }
-  const geometricTicks = [];
-  for (let index = 0; index < targetCount; index += 1) {
-    const t = targetCount === 1 ? 0 : index / (targetCount - 1);
-    geometricTicks.push(min * Math.pow(max / min, t));
-  }
-  return geometricTicks.map((value) => Number.parseFloat(value.toFixed(10)));
+  return makeLinearTicks(min, max, targetCount - 1);
 }
 
 function percentile(values, ratio) {
@@ -427,10 +440,10 @@ function prepareCanvas(canvas) {
 }
 
 function chartFrameBox(width, height) {
-  const left = 94;
+  const left = 104;
   const right = 18;
   const top = 18;
-  const bottom = 56;
+  const bottom = 58;
   return {
     left,
     right,
@@ -552,14 +565,14 @@ function drawChartFrame(ctx, width, height, yTicks, xTicks, mapX, mapY, yFormatt
   ctx.font = '12px "Avenir Next", "Trebuchet MS", sans-serif';
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  visibleYTicks.forEach((tick) => ctx.fillText(yFormatter(tick), left - 16, mapY(tick)));
+  visibleYTicks.forEach((tick) => ctx.fillText(yFormatter(tick), left - 18, mapY(tick)));
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   visibleXTicks.forEach((tick) => ctx.fillText(xFormatter(tick), mapX(tick), height - bottom + 10));
   ctx.save();
-  ctx.translate(14, top + plotHeight / 2);
+  ctx.translate(10, top + plotHeight / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.font = '11px "Avenir Next", "Trebuchet MS", sans-serif';
+  ctx.font = '10px "Avenir Next", "Trebuchet MS", sans-serif';
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.fillText(yLabel, 0, 0);
@@ -783,6 +796,31 @@ function zoomDescriptor(focalLengthMm) {
   return "Tele compression";
 }
 
+function scenePlaneDistances(metrics) {
+  const minDistance = distanceMinMetersForFocalLength(metrics.focalLengthMm);
+  const subjectDistance = clamp(metrics.probeDistanceMeters, minDistance, DISTANCE_MAX_METERS);
+  const foregroundDistance = clamp(displayState.foregroundDistance, minDistance, DISTANCE_MAX_METERS);
+  const backgroundDistance = clamp(displayState.backgroundDistance, minDistance, DISTANCE_MAX_METERS);
+  return { foregroundDistance, subjectDistance, backgroundDistance };
+}
+
+function previewBlurPixels(blurMm, cocMm) {
+  if (!Number.isFinite(blurMm) || blurMm <= 0) {
+    return 0;
+  }
+  const reference = Math.max(cocMm, 0.003);
+  const ratio = Math.max(blurMm / reference, 0);
+  return clamp(Math.pow(ratio, 0.64) * 1.85, 0, 24);
+}
+
+function setSceneLayerDepth(element, blurPx, baseScale = 1) {
+  const opacity = 1 - clamp(blurPx / 64, 0, 0.22);
+  const scale = baseScale + blurPx * 0.0025;
+  element.style.setProperty("--layer-blur", `${blurPx.toFixed(2)}px`);
+  element.style.setProperty("--layer-opacity", opacity.toFixed(3));
+  element.style.setProperty("--layer-scale", scale.toFixed(3));
+}
+
 function updateOutputBars(metrics) {
   const imageDistanceScale = BAR_SCALE_LIMITS.imageDistanceMm;
   const magnificationScale = BAR_SCALE_LIMITS.magnificationAbs;
@@ -928,6 +966,27 @@ function updateZoomDemo(metrics) {
   setMarkerLeft(elements.zoomScaleThumb, zoom);
 }
 
+function updateScenePreview(metrics) {
+  const scene = scenePlaneDistances(metrics);
+  const foregroundBlurMm = blurDiameterMm(metrics.focalLengthMm, metrics.fNumber, metrics.focusDistanceMm, scene.foregroundDistance * 1000);
+  const subjectBlurMm = blurDiameterMm(metrics.focalLengthMm, metrics.fNumber, metrics.focusDistanceMm, scene.subjectDistance * 1000);
+  const backgroundBlurMm = blurDiameterMm(metrics.focalLengthMm, metrics.fNumber, metrics.focusDistanceMm, scene.backgroundDistance * 1000);
+
+  setSceneLayerDepth(elements.sceneBackgroundLayer, previewBlurPixels(backgroundBlurMm, metrics.cocMm), 1);
+  setSceneLayerDepth(elements.sceneSubjectLayer, previewBlurPixels(subjectBlurMm, metrics.cocMm), 1);
+  setSceneLayerDepth(elements.sceneForegroundLayer, previewBlurPixels(foregroundBlurMm, metrics.cocMm), 1.02);
+  elements.sceneForegroundDistanceText.textContent = `foreground ${formatDistanceMeters(scene.foregroundDistance)}`;
+  elements.sceneSubjectDistanceText.textContent = `subject ${formatDistanceMeters(scene.subjectDistance)}`;
+  elements.sceneBackgroundDistanceText.textContent = `background ${formatDistanceMeters(scene.backgroundDistance)}`;
+
+  return {
+    ...scene,
+    foregroundBlurMm,
+    subjectBlurMm,
+    backgroundBlurMm,
+  };
+}
+
 function updateDerivedMetrics() {
   const focalLengthMm = state.focalLength;
   const focusDistanceMm = state.focusDistance * 1000;
@@ -968,7 +1027,7 @@ function updateDerivedMetrics() {
   return metrics;
 }
 
-function updateHelpText(metrics) {
+function updateHelpText(metrics, sceneMetrics) {
   const focusEquation = `1/f = 1/s + 1/s' with f=${formatMillimeters(metrics.focalLengthMm)}, s=${formatDistanceMeters(metrics.focusDistanceMeters)}, s'=${formatMillimeters(metrics.imageDistanceMm)}.`;
   const hyperfocalEquation = `H = f^2 / (N c) + f = ${formatDistanceMeters(metrics.hyperfocalMm / 1000)}.`;
   const nearEquation = `near = H s / (H + (s - f)) = ${formatDistanceMeters(metrics.nearDofMeters)}.`;
@@ -986,12 +1045,14 @@ function updateHelpText(metrics) {
   setHelp(helpTargets.contentWidthGroup, helpText("Content width.", `Current max width: ${formatPixels(displayState.width)}.`, "Widens or narrows the overall page layout."));
   setHelp(helpTargets.blurGroup, helpText("Glass blur.", `Current backdrop blur: ${formatPixels(displayState.blur)}.`, "Controls the frosted-glass blur behind cards and the menu."));
   setHelp(helpTargets.radiusGroup, helpText("Corner radius.", `Current shared radius: ${formatPixels(displayState.radius)}.`, "Applies the same rounding to cards, bars, and the drawer."));
+  setHelp(helpTargets.sceneForegroundGroup, helpText("Scene foreground distance.", `Current foreground plane = ${formatDistanceMeters(sceneMetrics.foregroundDistance)}.`, "This adjusts the foreground layer in the scene comparison only."));
+  setHelp(helpTargets.sceneBackgroundGroup, helpText("Scene background distance.", `Current background plane = ${formatDistanceMeters(sceneMetrics.backgroundDistance)}.`, "This adjusts the background layer in the scene comparison only."));
 
   setHelp(helpTargets.focalLengthControl, helpText("Focal length f.", `Current f = ${formatMillimeters(metrics.focalLengthMm)}.`, focusEquation, "Longer f usually means tighter framing and larger magnification."));
   setHelp(helpTargets.sensorDistanceControl, helpText("Sensor distance s'.", `Current s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, focusEquation, "This image-plane distance is locked to the focus distance by the thin-lens equation."));
   setHelp(helpTargets.focusDistanceControl, helpText("Focus distance s.", `Current s = ${formatDistanceMeters(metrics.focusDistanceMeters)}.`, focusEquation, "Subject distance is measured from the lens plane in this thin-lens model."));
   setHelp(helpTargets.fNumberControl, helpText("F-number N.", `Current N = ${formatFNumber(metrics.fNumber)}.`, `Aperture diameter D = f / N = ${formatMillimeters(metrics.apertureDiameterMm)}.`, "Smaller N means a wider opening and usually shallower depth of field."));
-  setHelp(helpTargets.cocControl, helpText("Circle of confusion c.", `Current CoC = ${formatMillimeters(metrics.cocMm)}.`, "Depth of field is the span where the blur circle stays at or below this limit.", hyperfocalEquation));
+  setHelp(helpTargets.cocControl, helpText("Circle of confusion (CoC).", `Current CoC = ${formatMillimeters(metrics.cocMm)}.`, "Depth of field is the span where the blur circle stays at or below this limit.", hyperfocalEquation));
   setHelp(helpTargets.probeDistanceControl, helpText("Probe distance z.", `Current z = ${formatDistanceMeters(metrics.probeDistanceMeters)}.`, `z' = f z / (z - f) = ${probeImageText}.`, `Probe blur c(z) = D |s'_focus - z'| / z' = ${formatMillimeters(metrics.probeBlurMm)}.`));
 
   setHelp(helpTargets.summaryText, helpText("Live thin-lens summary.", focusEquation, `Magnification m = -s' / s = ${formatMagnification(metrics.magnification)}.`, `Probe blur c(z) = ${formatMillimeters(metrics.probeBlurMm)}.`));
@@ -1008,6 +1069,7 @@ function updateHelpText(metrics) {
   setHelp(helpTargets.hyperfocalBar, helpText("Hyperfocal distance H.", "This is the focus distance that pushes the far DOF limit to Infinity.", hyperfocalEquation));
 
   setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, `The moving sensor plane and dimension line show s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, "The rear rays keep a fixed exit angle, so moving the sensor crops a different slice of the projected image.", `The amber ring marks the CoC threshold c = ${formatMillimeters(metrics.cocMm)} and the filled disc shows the current probe blur.`, "Approximate field slice: 2 * atan(sensor_half / f)."));
+  setHelp([helpTargets.sceneCard, elements.scenePreview], helpText("Scene blur comparison.", "Left panel stays sharp as a before view; right panel applies the live optical blur.", `Foreground plane is around ${formatDistanceMeters(sceneMetrics.foregroundDistance)} with blur ${formatMillimeters(sceneMetrics.foregroundBlurMm)}.`, `Subject plane follows z = ${formatDistanceMeters(sceneMetrics.subjectDistance)} with blur ${formatMillimeters(sceneMetrics.subjectBlurMm)}.`, `Background plane is around ${formatDistanceMeters(sceneMetrics.backgroundDistance)} with blur ${formatMillimeters(sceneMetrics.backgroundBlurMm)}.`, "Each layer uses the current thin-lens blur from the live f, N, s, z, and CoC settings."));
   setHelp([helpTargets.imageChartCard, elements.imageChart], helpText("Image distance chart.", "Y-axis equation: s' = f s / (s - f).", "The focus marker shows the currently selected subject distance s."));
   setHelp([helpTargets.magnificationChartCard, elements.magnificationChart], helpText("Magnification chart.", "Y-axis equation: |m| = |-s' / s|.", "The bar values keep the sign, but the plot shows magnitude only."));
   setHelp([helpTargets.blurChartCard, elements.blurChart], helpText("Blur and depth-of-field chart.", "Blur equation: c(z) = D |s'_focus - z'| / z', with z' = f z / (z - f).", "The shaded region is where c(z) <= CoC.", `Current CoC threshold: ${formatMillimeters(metrics.cocMm)}.`));
@@ -1019,12 +1081,16 @@ function loadDisplaySettings() {
     if (!stored || typeof stored !== "object") {
       return;
     }
-    displayState.theme = DISPLAY_THEMES.includes(stored.theme) ? stored.theme : DISPLAY_DEFAULTS.theme;
+    const storedVersion = Math.max(0, Math.floor(safeNumber(stored.version, 0)));
+    const storedTheme = DISPLAY_THEMES.includes(stored.theme) ? stored.theme : DISPLAY_DEFAULTS.theme;
+    displayState.theme = storedVersion < DISPLAY_STORAGE_VERSION && storedTheme === "sand" ? DISPLAY_DEFAULTS.theme : storedTheme;
     displayState.verbose = typeof stored.verbose === "boolean" ? stored.verbose : DISPLAY_DEFAULTS.verbose;
     displayState.transparency = quantize(clamp(safeNumber(stored.transparency, DISPLAY_DEFAULTS.transparency), 0, 60));
     displayState.width = quantize(clamp(safeNumber(stored.width, DISPLAY_DEFAULTS.width), 960, 1600), 20);
     displayState.blur = quantize(clamp(safeNumber(stored.blur, DISPLAY_DEFAULTS.blur), 0, 28));
     displayState.radius = quantize(clamp(safeNumber(stored.radius, DISPLAY_DEFAULTS.radius), 18, 34));
+    displayState.foregroundDistance = clamp(safeNumber(stored.foregroundDistance, DISPLAY_DEFAULTS.foregroundDistance), DISTANCE_FLOOR_METERS, DISTANCE_MAX_METERS);
+    displayState.backgroundDistance = clamp(safeNumber(stored.backgroundDistance, DISPLAY_DEFAULTS.backgroundDistance), DISTANCE_FLOOR_METERS, DISTANCE_MAX_METERS);
   } catch {
     Object.assign(displayState, DISPLAY_DEFAULTS);
   }
@@ -1032,7 +1098,10 @@ function loadDisplaySettings() {
 
 function saveDisplaySettings() {
   try {
-    window.localStorage.setItem(DISPLAY_STORAGE_KEY, JSON.stringify(displayState));
+    window.localStorage.setItem(
+      DISPLAY_STORAGE_KEY,
+      JSON.stringify({ version: DISPLAY_STORAGE_VERSION, ...displayState }),
+    );
   } catch {
     // Ignore storage failures so the page still works from file:// or private contexts.
   }
@@ -1047,6 +1116,9 @@ function syncThemeButtons() {
 }
 
 function syncDisplayControls() {
+  const minDistance = distanceMinMeters();
+  displayState.foregroundDistance = clamp(displayState.foregroundDistance, minDistance, DISTANCE_MAX_METERS);
+  displayState.backgroundDistance = clamp(displayState.backgroundDistance, minDistance, DISTANCE_MAX_METERS);
   elements.verboseToggle.checked = displayState.verbose;
   elements.transparencyRange.value = displayState.transparency.toFixed(0);
   elements.transparencyDisplay.textContent = `${displayState.transparency.toFixed(0)}%`;
@@ -1056,6 +1128,10 @@ function syncDisplayControls() {
   elements.blurStrengthDisplay.textContent = formatPixels(displayState.blur);
   elements.radiusRange.value = displayState.radius.toFixed(0);
   elements.radiusDisplay.textContent = formatPixels(displayState.radius);
+  elements.sceneForegroundRange.value = unmapLogSlider(displayState.foregroundDistance, minDistance, DISTANCE_MAX_METERS).toFixed(0);
+  elements.sceneForegroundDisplay.textContent = formatDistanceMeters(displayState.foregroundDistance);
+  elements.sceneBackgroundRange.value = unmapLogSlider(displayState.backgroundDistance, minDistance, DISTANCE_MAX_METERS).toFixed(0);
+  elements.sceneBackgroundDisplay.textContent = formatDistanceMeters(displayState.backgroundDistance);
   syncThemeButtons();
 }
 
@@ -1113,15 +1189,8 @@ function applyDisplaySettings(shouldRedraw = false) {
 
 function syncPresetButtons() {
   elements.presetButtons.forEach((button) => {
-    const preset = presets[button.dataset.preset];
-    const active =
-      preset &&
-      Math.abs(preset.focalLength - state.focalLength) < 0.01 &&
-      Math.abs(preset.focusDistance - state.focusDistance) < 0.01 &&
-      Math.abs(preset.fNumber - state.fNumber) < 0.01 &&
-      Math.abs(preset.coc - state.coc) < 0.0005 &&
-      Math.abs(preset.probeDistance - state.probeDistance) < 0.01;
-    button.classList.toggle("is-active", Boolean(active));
+    const active = button.dataset.preset === selectedPresetKey;
+    button.classList.toggle("is-active", active);
     button.setAttribute("aria-pressed", active ? "true" : "false");
   });
 }
@@ -1132,7 +1201,7 @@ function syncControls() {
   state.focusDistance = clamp(state.focusDistance, minDistance, DISTANCE_MAX_METERS);
   state.probeDistance = clamp(state.probeDistance, minDistance, DISTANCE_MAX_METERS);
   const sensorDistance = imageDistanceMm(state.focalLength, state.focusDistance * 1000);
-  elements.focalLengthRange.value = state.focalLength.toFixed(0);
+  elements.focalLengthRange.value = unmapLogSlider(state.focalLength, FOCAL_LENGTH_MIN_MM, FOCAL_LENGTH_MAX_MM).toFixed(0);
   elements.focalLengthNumber.value = state.focalLength.toFixed(0);
   elements.focalLengthDisplay.textContent = `${state.focalLength.toFixed(0)} mm`;
   elements.sensorDistanceRange.value = unmapLogSlider(sensorDistance, sensorBounds.min, sensorBounds.max).toFixed(0);
@@ -1145,10 +1214,10 @@ function syncControls() {
   elements.focusDistanceNumber.max = DISTANCE_MAX_METERS.toFixed(0);
   elements.focusDistanceNumber.value = state.focusDistance.toFixed(2);
   elements.focusDistanceDisplay.textContent = formatDistanceMeters(state.focusDistance);
-  elements.fNumberRange.value = state.fNumber.toFixed(1);
+  elements.fNumberRange.value = unmapLogSlider(state.fNumber, F_NUMBER_MIN, F_NUMBER_MAX).toFixed(0);
   elements.fNumberNumber.value = state.fNumber.toFixed(1);
   elements.fNumberDisplay.textContent = formatFNumber(state.fNumber);
-  elements.cocRange.value = state.coc.toFixed(3);
+  elements.cocRange.value = unmapLogSlider(state.coc, COC_MIN_MM, COC_MAX_MM).toFixed(0);
   elements.cocNumber.value = state.coc.toFixed(3);
   elements.cocDisplay.textContent = formatMillimeters(state.coc);
   elements.probeDistanceRange.value = unmapLogSlider(state.probeDistance, minDistance, DISTANCE_MAX_METERS).toFixed(0);
@@ -1162,21 +1231,47 @@ function syncControls() {
 function render() {
   syncControls();
   const metrics = updateDerivedMetrics();
-  updateHelpText(metrics);
-  updateOutputBars(metrics);
   updateZoomDemo(metrics);
+  const sceneMetrics = updateScenePreview(metrics);
+  updateHelpText(metrics, sceneMetrics);
+  updateOutputBars(metrics);
   drawImageChart(metrics);
   drawMagnificationChart(metrics);
   drawBlurChart(metrics);
 }
 
-function bindLinearPair(rangeElement, numberElement, key, min, max) {
+function selectedPreset() {
+  return selectedPresetKey ? presets[selectedPresetKey] || null : null;
+}
+
+function resetControlToSelectedPreset(controlKey) {
+  const preset = selectedPreset();
+  if (!preset) {
+    return;
+  }
+
+  if (controlKey === "sensorDistance") {
+    state.focalLength = preset.focalLength;
+    state.focusDistance = preset.focusDistance;
+  } else if (controlKey in preset) {
+    state[controlKey] = preset[controlKey];
+  } else {
+    return;
+  }
+
+  render();
+}
+
+function bindLogPair(rangeElement, numberElement, key, min, max, step = 1) {
   rangeElement.addEventListener("input", () => {
-    state[key] = clamp(safeNumber(rangeElement.value, state[key]), min, max);
+    state[key] = quantize(
+      clamp(mapLogSlider(safeNumber(rangeElement.value, 0), min, max), min, max),
+      step,
+    );
     render();
   });
   numberElement.addEventListener("input", () => {
-    state[key] = clamp(safeNumber(numberElement.value, state[key]), min, max);
+    state[key] = quantize(clamp(safeNumber(numberElement.value, state[key]), min, max), step);
     render();
   });
 }
@@ -1214,6 +1309,16 @@ function bindSensorDistancePair(rangeElement, numberElement) {
   });
 }
 
+function bindPresetReset(rangeElement, controlKey) {
+  rangeElement.addEventListener("dblclick", (event) => {
+    if (!selectedPreset()) {
+      return;
+    }
+    event.preventDefault();
+    resetControlToSelectedPreset(controlKey);
+  });
+}
+
 function bindDisplayRange(rangeElement, key, min, max, step = 1) {
   rangeElement.addEventListener("input", () => {
     const nextValue = quantize(clamp(safeNumber(rangeElement.value, displayState[key]), min, max), step);
@@ -1223,12 +1328,27 @@ function bindDisplayRange(rangeElement, key, min, max, step = 1) {
   });
 }
 
-bindLinearPair(elements.focalLengthRange, elements.focalLengthNumber, "focalLength", FOCAL_LENGTH_MIN_MM, FOCAL_LENGTH_MAX_MM);
-bindLinearPair(elements.fNumberRange, elements.fNumberNumber, "fNumber", F_NUMBER_MIN, F_NUMBER_MAX);
-bindLinearPair(elements.cocRange, elements.cocNumber, "coc", COC_MIN_MM, COC_MAX_MM);
+function bindDisplayDistanceRange(rangeElement, key) {
+  rangeElement.addEventListener("input", () => {
+    const minDistance = distanceMinMeters();
+    displayState[key] = mapLogSlider(safeNumber(rangeElement.value, 0), minDistance, DISTANCE_MAX_METERS);
+    applyDisplaySettings(true);
+    saveDisplaySettings();
+  });
+}
+
+bindLogPair(elements.focalLengthRange, elements.focalLengthNumber, "focalLength", FOCAL_LENGTH_MIN_MM, FOCAL_LENGTH_MAX_MM, 1);
+bindLogPair(elements.fNumberRange, elements.fNumberNumber, "fNumber", F_NUMBER_MIN, F_NUMBER_MAX, 0.1);
+bindLogPair(elements.cocRange, elements.cocNumber, "coc", COC_MIN_MM, COC_MAX_MM, 0.001);
 bindSensorDistancePair(elements.sensorDistanceRange, elements.sensorDistanceNumber);
 bindDistancePair(elements.focusDistanceRange, elements.focusDistanceNumber, "focusDistance");
 bindDistancePair(elements.probeDistanceRange, elements.probeDistanceNumber, "probeDistance");
+bindPresetReset(elements.focalLengthRange, "focalLength");
+bindPresetReset(elements.sensorDistanceRange, "sensorDistance");
+bindPresetReset(elements.focusDistanceRange, "focusDistance");
+bindPresetReset(elements.fNumberRange, "fNumber");
+bindPresetReset(elements.cocRange, "coc");
+bindPresetReset(elements.probeDistanceRange, "probeDistance");
 
 elements.presetButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -1236,6 +1356,7 @@ elements.presetButtons.forEach((button) => {
     if (!preset) {
       return;
     }
+    selectedPresetKey = button.dataset.preset;
     Object.assign(state, preset);
     render();
   });
@@ -1276,6 +1397,8 @@ bindDisplayRange(elements.transparencyRange, "transparency", 0, 60);
 bindDisplayRange(elements.contentWidthRange, "width", 960, 1600, 20);
 bindDisplayRange(elements.blurStrengthRange, "blur", 0, 28);
 bindDisplayRange(elements.radiusRange, "radius", 18, 34);
+bindDisplayDistanceRange(elements.sceneForegroundRange, "foregroundDistance");
+bindDisplayDistanceRange(elements.sceneBackgroundRange, "backgroundDistance");
 
 elements.resetDisplayButton.addEventListener("click", () => {
   Object.assign(displayState, DISPLAY_DEFAULTS);

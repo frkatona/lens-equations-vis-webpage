@@ -144,6 +144,40 @@
           />
         </div>
 
+        <div class="drawer-group">
+          <div class="drawer-row">
+            <label class="drawer-label" for="sceneForegroundRange">
+              Foreground distance
+            </label>
+            <output id="sceneForegroundDisplay">1.74 m</output>
+          </div>
+          <input
+            id="sceneForegroundRange"
+            type="range"
+            min="0"
+            max="1000"
+            step="1"
+            value="0"
+          />
+        </div>
+
+        <div class="drawer-group">
+          <div class="drawer-row">
+            <label class="drawer-label" for="sceneBackgroundRange">
+              Background distance
+            </label>
+            <output id="sceneBackgroundDisplay">6.60 m</output>
+          </div>
+          <input
+            id="sceneBackgroundRange"
+            type="range"
+            min="0"
+            max="1000"
+            step="1"
+            value="0"
+          />
+        </div>
+
         <button class="reset-display" id="resetDisplayButton" type="button">
           Reset display settings
         </button>
@@ -156,7 +190,7 @@
           <div class="controls-intro">
             <div class="controls-copy">
               <p class="eyebrow">Interactive optics playground</p>
-              <h2>Inputs</h2>
+              <h2>inputs</h2>
             </div>
             <p class="controls-brief">
               Slide the camera variables and watch the bars, zoom sketch, and
@@ -200,10 +234,10 @@
                 <input
                   id="focalLengthRange"
                   type="range"
-                  min="6"
-                  max="400"
+                  min="0"
+                  max="1000"
                   step="1"
-                  value="85"
+                  value="0"
                 />
                 <input
                   id="focalLengthNumber"
@@ -275,10 +309,10 @@
                 <input
                   id="fNumberRange"
                   type="range"
-                  min="1.2"
-                  max="32"
-                  step="0.1"
-                  value="2.0"
+                  min="0"
+                  max="1000"
+                  step="1"
+                  value="0"
                 />
                 <input
                   id="fNumberNumber"
@@ -293,17 +327,17 @@
 
             <div class="control">
               <div class="control-top">
-                <label for="cocRange">c</label>
+                <label for="cocRange">CoC</label>
                 <output id="cocDisplay">0.030 mm</output>
               </div>
               <div class="control-inputs">
                 <input
                   id="cocRange"
                   type="range"
-                  min="0.003"
-                  max="0.050"
-                  step="0.001"
-                  value="0.030"
+                  min="0"
+                  max="1000"
+                  step="1"
+                  value="0"
                 />
                 <input
                   id="cocNumber"
@@ -344,97 +378,234 @@
         </section>
 
         <section class="overview-grid">
-          <article class="panel output-bars-card">
-            <div class="section-head">
-              <h2>Derived outputs</h2>
-              <p>
-                Each bar uses a fixed per-metric scale, so equal values stay at
-                equal heights across different setups.
-              </p>
-            </div>
+          <article class="panel scene-card">
+            <div class="scene-compare-grid">
+              <figure class="scene-pane">
+                <figcaption>before optical blur</figcaption>
+                <svg
+                  id="scenePreviewReference"
+                  class="scene-preview"
+                  viewBox="0 0 760 280"
+                  aria-label="Stylized scene before applying optical blur"
+                >
+                  <defs>
+                    <linearGradient id="sceneSkyGradientRef" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" style="stop-color: var(--scene-sky-top)"></stop>
+                      <stop offset="100%" style="stop-color: var(--scene-sky-bottom)"></stop>
+                    </linearGradient>
+                    <linearGradient id="sceneGroundGradientRef" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" style="stop-color: var(--scene-ground-top)"></stop>
+                      <stop offset="100%" style="stop-color: var(--scene-ground-bottom)"></stop>
+                    </linearGradient>
+                    <radialGradient id="sceneGlowGradientRef" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" style="stop-color: var(--scene-glow)"></stop>
+                      <stop offset="100%" style="stop-color: rgba(255,255,255,0)"></stop>
+                    </radialGradient>
+                  </defs>
 
-            <div class="quick-pills">
-              <div class="quick-pill">
-                <span>near</span>
-                <strong id="nearDofValue">1.97 m</strong>
-              </div>
-              <div class="quick-pill">
-                <span>far</span>
-                <strong id="farDofValue">2.03 m</strong>
-              </div>
-              <div class="quick-pill">
-                <span>DOF</span>
-                <strong id="totalDofValue">6.36 cm</strong>
-              </div>
-            </div>
+                  <rect class="scene-frame" x="0" y="0" width="760" height="280" rx="26"></rect>
+                  <rect x="0" y="0" width="760" height="188" fill="url(#sceneSkyGradientRef)"></rect>
+                  <rect x="0" y="170" width="760" height="110" fill="url(#sceneGroundGradientRef)"></rect>
+                  <circle class="scene-glow" cx="600" cy="78" r="74" fill="url(#sceneGlowGradientRef)"></circle>
+                  <path
+                    class="scene-path"
+                    d="M 344 280 C 360 240 390 216 432 200 C 494 176 600 176 760 184 L 760 280 Z"
+                  ></path>
 
-            <div class="bar-grid" aria-label="Derived output bar graph">
-              <div class="bar-column">
-                <strong class="bar-value" id="imageDistanceBarValue">88.8 mm</strong>
-                <div class="bar-plot">
-                  <div class="bar-fill amber" id="imageDistanceBar"></div>
-                </div>
-                <span class="bar-label">s'</span>
-                <span class="bar-note" id="imageDistanceNote">close-focus range</span>
-              </div>
+                  <g class="scene-depth-layer">
+                    <path
+                      class="scene-mountain-back"
+                      d="M0 186 L92 122 L166 162 L254 110 L340 166 L448 118 L540 160 L628 108 L760 176 L760 280 L0 280 Z"
+                    ></path>
+                    <path
+                      class="scene-mountain-front"
+                      d="M0 204 L110 150 L198 182 L298 132 L392 186 L520 134 L632 180 L760 148 L760 280 L0 280 Z"
+                    ></path>
+                    <g class="scene-city">
+                      <rect x="72" y="170" width="16" height="36" rx="4"></rect>
+                      <rect x="96" y="158" width="18" height="48" rx="4"></rect>
+                      <rect x="124" y="165" width="14" height="41" rx="4"></rect>
+                      <rect x="566" y="166" width="16" height="40" rx="4"></rect>
+                      <rect x="592" y="154" width="20" height="52" rx="4"></rect>
+                      <rect x="622" y="162" width="14" height="44" rx="4"></rect>
+                    </g>
+                  </g>
 
-              <div class="bar-column">
-                <strong class="bar-value" id="magnificationBarValue">-0.044x</strong>
-                <div class="bar-plot">
-                  <div class="bar-fill teal" id="magnificationBar"></div>
-                </div>
-                <span class="bar-label">m</span>
-                <span class="bar-note" id="magnificationNote">bar uses |m|</span>
-              </div>
+                  <g class="scene-depth-layer">
+                    <ellipse class="scene-subject-shadow" cx="390" cy="232" rx="46" ry="12"></ellipse>
+                    <circle class="scene-subject-head" cx="394" cy="142" r="13"></circle>
+                    <path
+                      class="scene-subject-body"
+                      d="M379 157 C382 150 392 148 401 151 L414 157 C420 160 424 166 425 174 L428 200 C429 207 424 214 416 215 L406 216 L410 252 L394 252 L391 221 L381 252 L365 252 L373 205 L362 186 C357 177 359 167 367 162 Z"
+                    ></path>
+                    <path class="scene-subject-accent" d="M399 157 L412 163 L407 178 L394 173 Z"></path>
+                  </g>
 
-              <div class="bar-column">
-                <strong class="bar-value" id="apertureBarValue">42.5 mm</strong>
-                <div class="bar-plot">
-                  <div class="bar-fill sand" id="apertureBar"></div>
-                </div>
-                <span class="bar-label">D</span>
-                <span class="bar-note" id="apertureNote">opening size</span>
-              </div>
+                  <g class="scene-depth-layer">
+                    <path class="scene-branch" d="M48 278 C76 232 84 178 92 130 C98 90 108 66 132 34"></path>
+                    <g class="scene-flower" transform="translate(132 34) rotate(-18)">
+                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.6" ry="8.2"></ellipse>
+                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.4" ry="7.8" transform="rotate(72)"></ellipse>
+                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.6" ry="8.2" transform="rotate(144)"></ellipse>
+                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.4" ry="7.8" transform="rotate(216)"></ellipse>
+                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.6" ry="8.2" transform="rotate(288)"></ellipse>
+                      <circle class="scene-flower-center" cx="0" cy="0" r="3.1"></circle>
+                    </g>
+                    <ellipse class="scene-leaf alt" cx="114" cy="62" rx="16" ry="9" transform="rotate(18 114 62)"></ellipse>
+                    <ellipse class="scene-leaf" cx="102" cy="96" rx="16" ry="9" transform="rotate(-36 102 96)"></ellipse>
+                    <ellipse class="scene-leaf alt" cx="94" cy="132" rx="15" ry="8" transform="rotate(30 94 132)"></ellipse>
+                    <ellipse class="scene-leaf" cx="88" cy="164" rx="18" ry="10" transform="rotate(-14 88 164)"></ellipse>
+                    <path
+                      class="scene-grass"
+                      d="M0 280 L0 228 C24 214 34 246 46 208 C58 170 76 238 92 196 C108 154 124 238 136 208 C148 178 164 238 180 214 L180 280 Z"
+                    ></path>
+                    <path
+                      class="scene-grass alt"
+                      d="M760 280 L760 214 C742 206 730 248 718 214 C706 180 692 244 678 202 C664 160 650 248 638 214 C626 180 610 244 592 222 L592 280 Z"
+                    ></path>
+                    <path class="scene-branch alt" d="M708 278 C690 238 676 204 664 160 C650 112 628 84 596 58"></path>
+                    <g class="scene-flower" transform="translate(596 58) rotate(16)">
+                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.6" ry="8.2"></ellipse>
+                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.4" ry="7.8" transform="rotate(72)"></ellipse>
+                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.6" ry="8.2" transform="rotate(144)"></ellipse>
+                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.4" ry="7.8" transform="rotate(216)"></ellipse>
+                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.6" ry="8.2" transform="rotate(288)"></ellipse>
+                      <circle class="scene-flower-center" cx="0" cy="0" r="3.1"></circle>
+                    </g>
+                    <ellipse class="scene-leaf" cx="620" cy="92" rx="16" ry="9" transform="rotate(-28 620 92)"></ellipse>
+                    <ellipse class="scene-leaf alt" cx="642" cy="128" rx="16" ry="9" transform="rotate(18 642 128)"></ellipse>
+                  </g>
 
-              <div class="bar-column">
-                <strong class="bar-value" id="probeBlurBarValue">0.629 mm</strong>
-                <div class="bar-plot">
-                  <div class="bar-fill rust" id="probeBlurBar"></div>
-                  <div class="bar-threshold" id="probeBlurThreshold"></div>
-                </div>
-                <span class="bar-label">c(z)</span>
-                <span class="bar-note" id="probeBlurNote">marker = CoC threshold</span>
-              </div>
+                  <path class="scene-distance-line" d="M 164 42 Q 138 68 112 112"></path>
+                  <circle class="scene-distance-dot" cx="112" cy="112" r="5"></circle>
+                  <g class="scene-distance-chip" transform="translate(18 20)">
+                    <rect width="190" height="32" rx="16"></rect>
+                    <text id="sceneForegroundDistanceText" class="scene-distance-text" x="14" y="21">
+                      foreground 1.74 m
+                    </text>
+                  </g>
 
-              <div class="bar-column">
-                <strong class="bar-value" id="totalDofBarValue">6.36 cm</strong>
-                <div class="bar-plot">
-                  <div class="bar-fill moss" id="totalDofBar"></div>
-                </div>
-                <span class="bar-label">DOF</span>
-                <span class="bar-note" id="totalDofNote">relative to focus distance</span>
-              </div>
+                  <path class="scene-distance-line" d="M 380 46 Q 392 80 394 126"></path>
+                  <circle class="scene-distance-dot" cx="394" cy="126" r="5"></circle>
+                  <g class="scene-distance-chip" transform="translate(284 20)">
+                    <rect width="192" height="32" rx="16"></rect>
+                    <text id="sceneSubjectDistanceText" class="scene-distance-text" x="14" y="21">
+                      subject 3.00 m
+                    </text>
+                  </g>
 
-              <div class="bar-column">
-                <strong class="bar-value" id="hyperfocalBarValue">120.5 m</strong>
-                <div class="bar-plot">
-                  <div class="bar-fill plum" id="hyperfocalBar"></div>
-                </div>
-                <span class="bar-label">H</span>
-                <span class="bar-note" id="hyperfocalNote">reference ceiling</span>
-              </div>
+                  <path class="scene-distance-line" d="M 602 44 Q 594 78 568 128"></path>
+                  <circle class="scene-distance-dot" cx="568" cy="128" r="5"></circle>
+                  <g class="scene-distance-chip" transform="translate(504 20)">
+                    <rect width="208" height="32" rx="16"></rect>
+                    <text id="sceneBackgroundDistanceText" class="scene-distance-text" x="14" y="21">
+                      background 6.60 m
+                    </text>
+                  </g>
+                </svg>
+              </figure>
+
+              <figure class="scene-pane">
+                <figcaption>with optical blur</figcaption>
+                <svg
+                  id="scenePreview"
+                  class="scene-preview"
+                  viewBox="0 0 760 280"
+                  aria-label="Stylized scene with foreground, subject, and background blur"
+                >
+                  <defs>
+                    <linearGradient id="sceneSkyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" style="stop-color: var(--scene-sky-top)"></stop>
+                      <stop offset="100%" style="stop-color: var(--scene-sky-bottom)"></stop>
+                    </linearGradient>
+                    <linearGradient id="sceneGroundGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" style="stop-color: var(--scene-ground-top)"></stop>
+                      <stop offset="100%" style="stop-color: var(--scene-ground-bottom)"></stop>
+                    </linearGradient>
+                    <radialGradient id="sceneGlowGradient" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" style="stop-color: var(--scene-glow)"></stop>
+                      <stop offset="100%" style="stop-color: rgba(255,255,255,0)"></stop>
+                    </radialGradient>
+                  </defs>
+
+                  <rect class="scene-frame" x="0" y="0" width="760" height="280" rx="26"></rect>
+                  <rect x="0" y="0" width="760" height="188" fill="url(#sceneSkyGradient)"></rect>
+                  <rect x="0" y="170" width="760" height="110" fill="url(#sceneGroundGradient)"></rect>
+                  <circle class="scene-glow" cx="600" cy="78" r="74" fill="url(#sceneGlowGradient)"></circle>
+                  <path
+                    class="scene-path"
+                    d="M 344 280 C 360 240 390 216 432 200 C 494 176 600 176 760 184 L 760 280 Z"
+                  ></path>
+
+                  <g id="sceneBackgroundLayer" class="scene-depth-layer">
+                    <path
+                      class="scene-mountain-back"
+                      d="M0 186 L92 122 L166 162 L254 110 L340 166 L448 118 L540 160 L628 108 L760 176 L760 280 L0 280 Z"
+                    ></path>
+                    <path
+                      class="scene-mountain-front"
+                      d="M0 204 L110 150 L198 182 L298 132 L392 186 L520 134 L632 180 L760 148 L760 280 L0 280 Z"
+                    ></path>
+                    <g class="scene-city">
+                      <rect x="72" y="170" width="16" height="36" rx="4"></rect>
+                      <rect x="96" y="158" width="18" height="48" rx="4"></rect>
+                      <rect x="124" y="165" width="14" height="41" rx="4"></rect>
+                      <rect x="566" y="166" width="16" height="40" rx="4"></rect>
+                      <rect x="592" y="154" width="20" height="52" rx="4"></rect>
+                      <rect x="622" y="162" width="14" height="44" rx="4"></rect>
+                    </g>
+                  </g>
+
+                  <g id="sceneSubjectLayer" class="scene-depth-layer">
+                    <ellipse class="scene-subject-shadow" cx="390" cy="232" rx="46" ry="12"></ellipse>
+                    <circle class="scene-subject-head" cx="394" cy="142" r="13"></circle>
+                    <path
+                      class="scene-subject-body"
+                      d="M379 157 C382 150 392 148 401 151 L414 157 C420 160 424 166 425 174 L428 200 C429 207 424 214 416 215 L406 216 L410 252 L394 252 L391 221 L381 252 L365 252 L373 205 L362 186 C357 177 359 167 367 162 Z"
+                    ></path>
+                    <path class="scene-subject-accent" d="M399 157 L412 163 L407 178 L394 173 Z"></path>
+                  </g>
+
+                  <g id="sceneForegroundLayer" class="scene-depth-layer">
+                    <path class="scene-branch" d="M48 278 C76 232 84 178 92 130 C98 90 108 66 132 34"></path>
+                    <g class="scene-flower" transform="translate(132 34) rotate(-18)">
+                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.6" ry="8.2"></ellipse>
+                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.4" ry="7.8" transform="rotate(72)"></ellipse>
+                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.6" ry="8.2" transform="rotate(144)"></ellipse>
+                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.4" ry="7.8" transform="rotate(216)"></ellipse>
+                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.6" ry="8.2" transform="rotate(288)"></ellipse>
+                      <circle class="scene-flower-center" cx="0" cy="0" r="3.1"></circle>
+                    </g>
+                    <ellipse class="scene-leaf alt" cx="114" cy="62" rx="16" ry="9" transform="rotate(18 114 62)"></ellipse>
+                    <ellipse class="scene-leaf" cx="102" cy="96" rx="16" ry="9" transform="rotate(-36 102 96)"></ellipse>
+                    <ellipse class="scene-leaf alt" cx="94" cy="132" rx="15" ry="8" transform="rotate(30 94 132)"></ellipse>
+                    <ellipse class="scene-leaf" cx="88" cy="164" rx="18" ry="10" transform="rotate(-14 88 164)"></ellipse>
+                    <path
+                      class="scene-grass"
+                      d="M0 280 L0 228 C24 214 34 246 46 208 C58 170 76 238 92 196 C108 154 124 238 136 208 C148 178 164 238 180 214 L180 280 Z"
+                    ></path>
+                    <path
+                      class="scene-grass alt"
+                      d="M760 280 L760 214 C742 206 730 248 718 214 C706 180 692 244 678 202 C664 160 650 248 638 214 C626 180 610 244 592 222 L592 280 Z"
+                    ></path>
+                    <path class="scene-branch alt" d="M708 278 C690 238 676 204 664 160 C650 112 628 84 596 58"></path>
+                    <g class="scene-flower" transform="translate(596 58) rotate(16)">
+                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.6" ry="8.2"></ellipse>
+                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.4" ry="7.8" transform="rotate(72)"></ellipse>
+                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.6" ry="8.2" transform="rotate(144)"></ellipse>
+                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.4" ry="7.8" transform="rotate(216)"></ellipse>
+                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.6" ry="8.2" transform="rotate(288)"></ellipse>
+                      <circle class="scene-flower-center" cx="0" cy="0" r="3.1"></circle>
+                    </g>
+                    <ellipse class="scene-leaf" cx="620" cy="92" rx="16" ry="9" transform="rotate(-28 620 92)"></ellipse>
+                    <ellipse class="scene-leaf alt" cx="642" cy="128" rx="16" ry="9" transform="rotate(18 642 128)"></ellipse>
+                  </g>
+                </svg>
+              </figure>
             </div>
           </article>
 
           <article class="panel zoom-demo-card">
-            <div class="section-head">
-              <h2>Variable lens demo</h2>
-              <p>
-                Simplified zoom-lens sketch: moving lens groups changes the
-                effective focal length and narrows the accepted field.
-              </p>
-            </div>
-
             <div class="zoom-meta">
               <span class="zoom-pill" id="zoomStateLabel">Portrait reach</span>
               <span class="zoom-pill muted" id="zoomFocalValue">85 mm effective</span>
@@ -565,17 +736,91 @@
         </section>
 
         <section class="charts-grid">
-          <article class="panel chart-card">
-            <div class="chart-heading">
-              <h3>Image distance vs. subject distance</h3>
-              <p>Near focus demands much more sensor travel.</p>
+          <article class="panel output-bars-card">
+            <div class="section-head">
+              <h2>outputs</h2>
+              <p>
+                Each bar uses a fixed per-metric scale, so equal values stay at
+                equal heights across different setups.
+              </p>
             </div>
-            <canvas id="imageChart" aria-label="Image distance chart"></canvas>
+
+            <div class="quick-pills">
+              <div class="quick-pill">
+                <span>near</span>
+                <strong id="nearDofValue">1.97 m</strong>
+              </div>
+              <div class="quick-pill">
+                <span>far</span>
+                <strong id="farDofValue">2.03 m</strong>
+              </div>
+              <div class="quick-pill">
+                <span>DOF</span>
+                <strong id="totalDofValue">6.36 cm</strong>
+              </div>
+            </div>
+
+            <div class="bar-grid" aria-label="Derived output bar graph">
+              <div class="bar-column">
+                <strong class="bar-value" id="imageDistanceBarValue">88.8 mm</strong>
+                <div class="bar-plot">
+                  <div class="bar-fill amber" id="imageDistanceBar"></div>
+                </div>
+                <span class="bar-label">s'</span>
+                <span class="bar-note" id="imageDistanceNote">close-focus range</span>
+              </div>
+
+              <div class="bar-column">
+                <strong class="bar-value" id="magnificationBarValue">-0.044x</strong>
+                <div class="bar-plot">
+                  <div class="bar-fill teal" id="magnificationBar"></div>
+                </div>
+                <span class="bar-label">m</span>
+                <span class="bar-note" id="magnificationNote">bar uses |m|</span>
+              </div>
+
+              <div class="bar-column">
+                <strong class="bar-value" id="apertureBarValue">42.5 mm</strong>
+                <div class="bar-plot">
+                  <div class="bar-fill sand" id="apertureBar"></div>
+                </div>
+                <span class="bar-label">D</span>
+                <span class="bar-note" id="apertureNote">opening size</span>
+              </div>
+
+              <div class="bar-column">
+                <strong class="bar-value" id="probeBlurBarValue">0.629 mm</strong>
+                <div class="bar-plot">
+                  <div class="bar-fill rust" id="probeBlurBar"></div>
+                  <div class="bar-threshold" id="probeBlurThreshold"></div>
+                </div>
+                <span class="bar-label">c(z)</span>
+                <span class="bar-note" id="probeBlurNote">marker = CoC threshold</span>
+              </div>
+
+              <div class="bar-column">
+                <strong class="bar-value" id="totalDofBarValue">6.36 cm</strong>
+                <div class="bar-plot">
+                  <div class="bar-fill moss" id="totalDofBar"></div>
+                </div>
+                <span class="bar-label">DOF</span>
+                <span class="bar-note" id="totalDofNote">relative to focus distance</span>
+              </div>
+
+              <div class="bar-column">
+                <strong class="bar-value" id="hyperfocalBarValue">120.5 m</strong>
+                <div class="bar-plot">
+                  <div class="bar-fill plum" id="hyperfocalBar"></div>
+                </div>
+                <span class="bar-label">H</span>
+                <span class="bar-note" id="hyperfocalNote">reference ceiling</span>
+              </div>
+            </div>
           </article>
 
           <article class="panel chart-card">
             <div class="chart-heading">
-              <h3>Magnification vs. subject distance</h3>
+              <h3>magnification vs. subject distance</h3>
               <p>Bar values show the signed image flip, but this plot shows |m|.</p>
             </div>
             <canvas
@@ -584,12 +829,20 @@
             ></canvas>
           </article>
 
-          <article class="panel chart-card wide">
+          <article class="panel chart-card">
             <div class="chart-heading">
-              <h3>Blur diameter and depth of field</h3>
+              <h3>image distance vs. subject distance</h3>
+              <p>Near focus demands much more sensor travel.</p>
+            </div>
+            <canvas id="imageChart" aria-label="Image distance chart"></canvas>
+          </article>
+
+          <article class="panel chart-card">
+            <div class="chart-heading">
+              <h3>depth of field</h3>
               <p>The shaded span stays at or below the chosen circle of confusion.</p>
             </div>
-            <canvas id="blurChart" aria-label="Blur diameter chart"></canvas>
+            <canvas id="blurChart" aria-label="Depth of field chart"></canvas>
           </article>
         </section>
       </main>
