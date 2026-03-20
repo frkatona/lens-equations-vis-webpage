@@ -710,9 +710,26 @@ body[data-verbose="false"] .status-line {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
   margin-top: 0.85rem;
+}
+
+.controls-group-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.controls-group-inner {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
 }
 
 .control {
@@ -982,6 +999,18 @@ input[type="number"] {
   background: linear-gradient(180deg, var(--demo-bg-top), var(--demo-bg-bottom));
 }
 
+#zoomLensDemo.is-interpolating * {
+  transition: all 130ms ease;
+}
+
+.zoom-scale-track.is-interpolating .zoom-scale-fill {
+  transition: width 130ms ease;
+}
+
+.zoom-scale-track.is-interpolating .zoom-scale-thumb {
+  transition: left 130ms ease;
+}
+
 #zoomLensDemo .demo-stage {
   fill: var(--demo-stage-fill);
   stroke: var(--demo-stage-stroke);
@@ -1046,10 +1075,6 @@ input[type="number"] {
   fill: url(#glassGradient);
   stroke: rgba(27, 42, 50, 0.24);
   stroke-width: 2;
-  transition:
-    cx 130ms ease,
-    rx 130ms ease,
-    ry 130ms ease;
 }
 
 #zoomLensDemo .zoom-iris {
@@ -1281,7 +1306,6 @@ input[type="number"] {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, rgba(194, 106, 44, 0.88), rgba(27, 113, 118, 0.88));
-  transition: width 130ms ease;
 }
 
 .zoom-scale-thumb {
@@ -1411,7 +1435,11 @@ canvas {
   }
 
   .controls-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .controls-group-inner {
+    grid-template-columns: 1fr;
   }
 
   .quick-pills {
@@ -1442,6 +1470,10 @@ canvas {
 @media (max-width: 560px) {
   .controls-grid {
     grid-template-columns: 1fr;
+  }
+
+  .controls-group-inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .bar-grid {

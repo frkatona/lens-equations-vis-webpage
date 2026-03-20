@@ -75,6 +75,12 @@
             <input id="verboseToggle" type="checkbox" />
           </label>
         </div>
+        <div class="drawer-group">
+          <label class="drawer-toggle" for="interpolateToggle">
+            <span class="drawer-label">Smooth animation</span>
+            <input id="interpolateToggle" type="checkbox" />
+          </label>
+        </div>
 
         <div class="drawer-group">
           <div class="drawer-row">
@@ -220,158 +226,174 @@
             f 85 mm | s 2.00 m | s' 88.8 mm | c(z) 0.629 mm | DOF 6.36 cm
           </p>
 
+
           <p class="controls-note">
             Thin-lens sketch. Distances are measured from the lens plane.
           </p>
 
           <div class="controls-grid">
-            <div class="control">
-              <div class="control-top">
-                <label for="focalLengthRange">f</label>
-                <output id="focalLengthDisplay">85 mm</output>
-              </div>
-              <div class="control-inputs">
-                <input
-                  id="focalLengthRange"
-                  type="range"
-                  min="0"
-                  max="1000"
-                  step="1"
-                  value="0"
-                />
-                <input
-                  id="focalLengthNumber"
-                  type="number"
-                  min="6"
-                  max="400"
-                  step="1"
-                  value="85"
-                />
+            <div class="controls-group">
+              <span class="controls-group-label">lens</span>
+              <div class="controls-group-inner">
+                <div class="control">
+                  <div class="control-top">
+                    <label for="focalLengthRange">f</label>
+                    <output id="focalLengthDisplay">85 mm</output>
+                  </div>
+                  <div class="control-inputs">
+                    <input
+                      id="focalLengthRange"
+                      type="range"
+                      min="0"
+                      max="1000"
+                      step="1"
+                      value="0"
+                    />
+                    <input
+                      id="focalLengthNumber"
+                      type="number"
+                      min="6"
+                      max="400"
+                      step="1"
+                      value="85"
+                    />
+                  </div>
+                </div>
+
+                <div class="control">
+                  <div class="control-top">
+                    <label for="fNumberRange">N</label>
+                    <output id="fNumberDisplay">f/2.0</output>
+                  </div>
+                  <div class="control-inputs">
+                    <input
+                      id="fNumberRange"
+                      type="range"
+                      min="0"
+                      max="1000"
+                      step="1"
+                      value="0"
+                    />
+                    <input
+                      id="fNumberNumber"
+                      type="number"
+                      min="1.2"
+                      max="32"
+                      step="0.1"
+                      value="2.0"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="control">
-              <div class="control-top">
-                <label for="sensorDistanceRange">s'</label>
-                <output id="sensorDistanceDisplay">88.8 mm</output>
-              </div>
-              <div class="control-inputs">
-                <input
-                  id="sensorDistanceRange"
-                  type="range"
-                  min="0"
-                  max="1000"
-                  step="1"
-                  value="0"
-                />
-                <input
-                  id="sensorDistanceNumber"
-                  type="number"
-                  min="6.00"
-                  max="10000"
-                  step="0.01"
-                  value="88.82"
-                />
+            <div class="controls-group">
+              <span class="controls-group-label">focus</span>
+              <div class="controls-group-inner">
+                <div class="control">
+                  <div class="control-top">
+                    <label for="focusDistanceRange">s</label>
+                    <output id="focusDistanceDisplay">2.00 m</output>
+                  </div>
+                  <div class="control-inputs">
+                    <input
+                      id="focusDistanceRange"
+                      type="range"
+                      min="0"
+                      max="1000"
+                      step="1"
+                      value="0"
+                    />
+                    <input
+                      id="focusDistanceNumber"
+                      type="number"
+                      min="0.10"
+                      max="100"
+                      step="0.01"
+                      value="2.00"
+                    />
+                  </div>
+                </div>
+
+                <div class="control">
+                  <div class="control-top">
+                    <label for="sensorDistanceRange">s'</label>
+                    <output id="sensorDistanceDisplay">88.8 mm</output>
+                  </div>
+                  <div class="control-inputs">
+                    <input
+                      id="sensorDistanceRange"
+                      type="range"
+                      min="0"
+                      max="1000"
+                      step="1"
+                      value="0"
+                    />
+                    <input
+                      id="sensorDistanceNumber"
+                      type="number"
+                      min="6.00"
+                      max="10000"
+                      step="0.01"
+                      value="88.82"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="control">
-              <div class="control-top">
-                <label for="focusDistanceRange">s</label>
-                <output id="focusDistanceDisplay">2.00 m</output>
-              </div>
-              <div class="control-inputs">
-                <input
-                  id="focusDistanceRange"
-                  type="range"
-                  min="0"
-                  max="1000"
-                  step="1"
-                  value="0"
-                />
-                <input
-                  id="focusDistanceNumber"
-                  type="number"
-                  min="0.10"
-                  max="100"
-                  step="0.01"
-                  value="2.00"
-                />
-              </div>
-            </div>
+            <div class="controls-group">
+              <span class="controls-group-label">analysis</span>
+              <div class="controls-group-inner">
+                <div class="control">
+                  <div class="control-top">
+                    <label for="cocRange">CoC</label>
+                    <output id="cocDisplay">0.030 mm</output>
+                  </div>
+                  <div class="control-inputs">
+                    <input
+                      id="cocRange"
+                      type="range"
+                      min="0"
+                      max="1000"
+                      step="1"
+                      value="0"
+                    />
+                    <input
+                      id="cocNumber"
+                      type="number"
+                      min="0.003"
+                      max="0.050"
+                      step="0.001"
+                      value="0.030"
+                    />
+                  </div>
+                </div>
 
-            <div class="control">
-              <div class="control-top">
-                <label for="fNumberRange">N</label>
-                <output id="fNumberDisplay">f/2.0</output>
-              </div>
-              <div class="control-inputs">
-                <input
-                  id="fNumberRange"
-                  type="range"
-                  min="0"
-                  max="1000"
-                  step="1"
-                  value="0"
-                />
-                <input
-                  id="fNumberNumber"
-                  type="number"
-                  min="1.2"
-                  max="32"
-                  step="0.1"
-                  value="2.0"
-                />
-              </div>
-            </div>
-
-            <div class="control">
-              <div class="control-top">
-                <label for="cocRange">CoC</label>
-                <output id="cocDisplay">0.030 mm</output>
-              </div>
-              <div class="control-inputs">
-                <input
-                  id="cocRange"
-                  type="range"
-                  min="0"
-                  max="1000"
-                  step="1"
-                  value="0"
-                />
-                <input
-                  id="cocNumber"
-                  type="number"
-                  min="0.003"
-                  max="0.050"
-                  step="0.001"
-                  value="0.030"
-                />
-              </div>
-            </div>
-
-            <div class="control">
-              <div class="control-top">
-                <label for="probeDistanceRange">z</label>
-                <output id="probeDistanceDisplay">3.00 m</output>
-              </div>
-              <div class="control-inputs">
-                <input
-                  id="probeDistanceRange"
-                  type="range"
-                  min="0"
-                  max="1000"
-                  step="1"
-                  value="0"
-                />
-                <input
-                  id="probeDistanceNumber"
-                  type="number"
-                  min="0.10"
-                  max="100"
-                  step="0.01"
-                  value="3.00"
-                />
+                <div class="control">
+                  <div class="control-top">
+                    <label for="probeDistanceRange">z</label>
+                    <output id="probeDistanceDisplay">3.00 m</output>
+                  </div>
+                  <div class="control-inputs">
+                    <input
+                      id="probeDistanceRange"
+                      type="range"
+                      min="0"
+                      max="1000"
+                      step="1"
+                      value="0"
+                    />
+                    <input
+                      id="probeDistanceNumber"
+                      type="number"
+                      min="0.10"
+                      max="100"
+                      step="0.01"
+                      value="3.00"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -630,10 +652,8 @@
               <rect class="demo-stage" x="20" y="26" width="580" height="228" rx="28"></rect>
               <line class="demo-axis" x1="48" y1="140" x2="574" y2="140"></line>
 
-              <g class="object-arrow">
-                <line x1="78" y1="192" x2="78" y2="92"></line>
-                <polygon points="78,76 66,102 90,102"></polygon>
-                <text x="54" y="214">scene</text>
+              <g id="zoomSceneTree" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(10, 110)">
+                <path d="M10,30 L10,36 M4,26 C4,18 16,18 16,26 C16,30 4,30 4,26 Z"></path>
               </g>
 
               <path id="zoomFieldCone" class="field-cone" d=""></path>
@@ -641,8 +661,8 @@
               <path id="zoomRayMid" class="ray ray-mid" d=""></path>
               <path id="zoomRayBottom" class="ray ray-bottom" d=""></path>
 
-              <rect class="lens-barrel" x="156" y="76" width="310" height="128" rx="64"></rect>
-              <rect class="lens-barrel-inner" x="182" y="92" width="258" height="96" rx="48"></rect>
+              <path id="zoomBarrelOuter" class="lens-barrel" d=""></path>
+              <rect id="zoomBarrelInner" class="lens-barrel-inner" x="182" y="88" width="258" height="104" rx="16"></rect>
 
               <ellipse
                 id="zoomFrontGroup"
@@ -671,58 +691,22 @@
               <circle id="zoomIris" class="zoom-iris" cx="360" cy="140" r="8"></circle>
 
               <line id="zoomLensPlane" class="lens-plane" x1="426" y1="82" x2="426" y2="210"></line>
-              <line
-                id="zoomSensorDistanceGuideStart"
-                class="dimension-guide"
-                x1="426"
-                y1="190"
-                x2="426"
-                y2="232"
-              ></line>
-              <line
-                id="zoomSensorDistanceGuideEnd"
-                class="dimension-guide"
-                x1="514"
-                y1="190"
-                x2="514"
-                y2="232"
-              ></line>
-              <line
-                id="zoomSensorDistanceLine"
-                class="dimension-line"
-                x1="426"
-                y1="224"
-                x2="514"
-                y2="224"
-              ></line>
-              <line
-                id="zoomSensorDistanceStartTick"
-                class="dimension-tick"
-                x1="426"
-                y1="218"
-                x2="426"
-                y2="230"
-              ></line>
-              <line
-                id="zoomSensorDistanceEndTick"
-                class="dimension-tick"
-                x1="514"
-                y1="218"
-                x2="514"
-                y2="230"
-              ></line>
-              <text class="demo-label" id="zoomSensorDistanceText" x="470" y="214" text-anchor="middle">
-                s' = 88.8 mm
-              </text>
-
               <line id="zoomProjectionSlice" class="projection-slice" x1="514" y1="92" x2="514" y2="188"></line>
+              <line id="zoomSensorPlane" class="sensor-plane" x1="514" y1="72" x2="514" y2="208"></line>
+              
               <circle id="zoomProbeBlurDisc" class="probe-blur-disc" cx="514" cy="140" r="14"></circle>
               <circle id="zoomCocRing" class="coc-ring" cx="514" cy="140" r="7"></circle>
+              
+              <line id="zoomSensorDistanceGuideStart" class="dimension-guide" x1="426" y1="190" x2="426" y2="232"></line>
+              <line id="zoomSensorDistanceGuideEnd" class="dimension-guide" x1="514" y1="190" x2="514" y2="232"></line>
+              <line id="zoomSensorDistanceLine" class="dimension-line" x1="426" y1="224" x2="514" y2="224"></line>
+              <line id="zoomSensorDistanceStartTick" class="dimension-tick" x1="426" y1="218" x2="426" y2="230"></line>
+              <line id="zoomSensorDistanceEndTick" class="dimension-tick" x1="514" y1="218" x2="514" y2="230"></line>
 
-              <line id="zoomSensorPlane" class="sensor-plane" x1="514" y1="72" x2="514" y2="208"></line>
               <text class="demo-label" id="zoomSensorLabel" x="520" y="88">sensor</text>
               <text class="demo-label" x="174" y="66">moving lens groups</text>
-              <text class="demo-label" id="zoomFieldText" x="48" y="60">wide field</text>
+              <text class="demo-label" id="zoomFieldText" x="42" y="248">wide field</text>
+              <text class="demo-label" id="zoomSensorDistanceText" x="470" y="238" text-anchor="middle">s' = 88.8 mm</text>
             </svg>
 
             <div class="zoom-scale">
