@@ -119,6 +119,7 @@ const elements = {
   zoomSensorDistanceStartTick: document.getElementById("zoomSensorDistanceStartTick"),
   zoomSensorDistanceEndTick: document.getElementById("zoomSensorDistanceEndTick"),
   zoomSensorDistanceText: document.getElementById("zoomSensorDistanceText"),
+  zoomProjectionSlice: document.getElementById("zoomProjectionSlice"),
   zoomProbeBlurDisc: document.getElementById("zoomProbeBlurDisc"),
   zoomCocRing: document.getElementById("zoomCocRing"),
   zoomFieldCone: document.getElementById("zoomFieldCone"),
@@ -861,11 +862,13 @@ function updateZoomDemo(metrics) {
   const zoom = normalizeZoom(metrics.focalLengthMm);
   const centerY = 140;
   const sceneX = 78;
+  const sensorPlaneTopY = 72;
+  const sensorPlaneBottomY = 208;
+  const sensorPlaneHalfHeight = (sensorPlaneBottomY - sensorPlaneTopY) / 2;
   const frontX = 238 + zoom * 24;
   const middleX = 322 + zoom * 62;
   const rearX = 396 + zoom * 90;
   const sceneHalfHeight = 82 - zoom * 52;
-  const sensorHalfHeight = 34;
   const frontHalfHeight = 48 - zoom * 4;
   const middleHalfHeight = 30 - zoom * 3;
   const rearHalfHeight = 18 - zoom * 2;
@@ -878,8 +881,9 @@ function updateZoomDemo(metrics) {
   const sensorTrackMaxX = 546;
   const sensorTravel = normalizeRange(metrics.sensorDistanceMm, sensorBounds.min, sensorBounds.max);
   const sensorX = sensorTrackMinX + sensorTravel * (sensorTrackMaxX - sensorTrackMinX);
-  const rearExitSlope = (sensorHalfHeight - rearHalfHeight) / Math.max(sensorTrackMinX - rearX, 1);
-  const projectedSensorHalfHeight = clamp(rearHalfHeight + rearExitSlope * (sensorX - rearX), sensorHalfHeight, 86);
+  const projectionFitX = sensorTrackMinX + (sensorTrackMaxX - sensorTrackMinX) * (0.26 + (1 - zoom) * 0.18);
+  const rearExitSlope = (sensorPlaneHalfHeight - rearHalfHeight) / Math.max(projectionFitX - rearX, 1);
+  const projectedSensorHalfHeight = clamp(rearHalfHeight + rearExitSlope * (sensorX - rearX), 12, 96);
   const projectedSensorTopY = centerY - projectedSensorHalfHeight;
   const projectedSensorBottomY = centerY + projectedSensorHalfHeight;
   const cocDisplayMax = Math.max(metrics.probeBlurMm, metrics.cocMm * 1.6, 0.06);
@@ -915,6 +919,10 @@ function updateZoomDemo(metrics) {
   elements.zoomSensorDistanceEndTick.setAttribute("x2", sensorX.toFixed(1));
   elements.zoomSensorDistanceText.setAttribute("x", ((lensPlaneX + sensorX) / 2).toFixed(1));
   elements.zoomSensorDistanceText.textContent = verbose ? `s' = ${formatMillimeters(metrics.sensorDistanceMm)}` : `s' ${formatMillimeters(metrics.sensorDistanceMm)}`;
+  elements.zoomProjectionSlice.setAttribute("x1", sensorX.toFixed(1));
+  elements.zoomProjectionSlice.setAttribute("x2", sensorX.toFixed(1));
+  elements.zoomProjectionSlice.setAttribute("y1", projectedSensorTopY.toFixed(1));
+  elements.zoomProjectionSlice.setAttribute("y2", projectedSensorBottomY.toFixed(1));
   elements.zoomProbeBlurDisc.setAttribute("cx", sensorX.toFixed(1));
   elements.zoomProbeBlurDisc.setAttribute("cy", centerY.toFixed(1));
   elements.zoomProbeBlurDisc.setAttribute("r", probeBlurRadius.toFixed(1));
@@ -936,8 +944,8 @@ function updateZoomDemo(metrics) {
   const topRay = [
     { x: sceneX, y: centerY - sceneHalfHeight },
     { x: frontX - 10, y: centerY - sceneHalfHeight * 0.72 },
-    { x: middleX, y: centerY - (sensorHalfHeight + 18 + zoom * 12) },
-    { x: rearX, y: centerY - (sensorHalfHeight + 8) },
+    { x: middleX, y: centerY - (sensorPlaneHalfHeight + 18 + zoom * 12) },
+    { x: rearX, y: centerY - (sensorPlaneHalfHeight + 8) },
     { x: sensorX, y: projectedSensorTopY },
   ];
   const midRay = [
@@ -950,8 +958,8 @@ function updateZoomDemo(metrics) {
   const bottomRay = [
     { x: sceneX, y: centerY + sceneHalfHeight },
     { x: frontX - 10, y: centerY + sceneHalfHeight * 0.72 },
-    { x: middleX, y: centerY + (sensorHalfHeight + 18 + zoom * 12) },
-    { x: rearX, y: centerY + (sensorHalfHeight + 8) },
+    { x: middleX, y: centerY + (sensorPlaneHalfHeight + 18 + zoom * 12) },
+    { x: rearX, y: centerY + (sensorPlaneHalfHeight + 8) },
     { x: sensorX, y: projectedSensorBottomY },
   ];
 
@@ -1068,7 +1076,7 @@ function updateHelpText(metrics, sceneMetrics) {
   setHelp(helpTargets.totalDofBar, helpText("Total depth of field.", hyperfocalEquation, nearEquation, farEquation, totalEquation));
   setHelp(helpTargets.hyperfocalBar, helpText("Hyperfocal distance H.", "This is the focus distance that pushes the far DOF limit to Infinity.", hyperfocalEquation));
 
-  setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, `The moving sensor plane and dimension line show s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, "The rear rays keep a fixed exit angle, so moving the sensor crops a different slice of the projected image.", `The amber ring marks the CoC threshold c = ${formatMillimeters(metrics.cocMm)} and the filled disc shows the current probe blur.`, "Approximate field slice: 2 * atan(sensor_half / f)."));
+  setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, `The moving sensor plane and dimension line show s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, "The rear rays keep a fixed exit angle, and the teal span shows the projected image height at the sensor plane.", "If that span is shorter than the sensor, the image fits inside it; if it runs past the sensor ends, the sensor is cropping the projection.", `The amber ring marks the CoC threshold c = ${formatMillimeters(metrics.cocMm)} and the filled disc shows the current probe blur.`, "Approximate field slice: 2 * atan(sensor_half / f)."));
   setHelp([helpTargets.sceneCard, elements.scenePreview], helpText("Scene blur comparison.", "Left panel stays sharp as a before view; right panel applies the live optical blur.", `Foreground plane is around ${formatDistanceMeters(sceneMetrics.foregroundDistance)} with blur ${formatMillimeters(sceneMetrics.foregroundBlurMm)}.`, `Subject plane follows z = ${formatDistanceMeters(sceneMetrics.subjectDistance)} with blur ${formatMillimeters(sceneMetrics.subjectBlurMm)}.`, `Background plane is around ${formatDistanceMeters(sceneMetrics.backgroundDistance)} with blur ${formatMillimeters(sceneMetrics.backgroundBlurMm)}.`, "Each layer uses the current thin-lens blur from the live f, N, s, z, and CoC settings."));
   setHelp([helpTargets.imageChartCard, elements.imageChart], helpText("Image distance chart.", "Y-axis equation: s' = f s / (s - f).", "The focus marker shows the currently selected subject distance s."));
   setHelp([helpTargets.magnificationChartCard, elements.magnificationChart], helpText("Magnification chart.", "Y-axis equation: |m| = |-s' / s|.", "The bar values keep the sign, but the plot shows magnitude only."));
