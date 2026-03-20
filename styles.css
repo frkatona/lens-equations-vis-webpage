@@ -288,6 +288,21 @@ h3 {
   font-weight: 700;
 }
 
+.drawer-toggle {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: center;
+  cursor: pointer;
+}
+
+.drawer-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--teal);
+}
+
 .theme-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -451,6 +466,25 @@ h3 {
   z-index: 1;
   margin-top: 0.7rem;
   font-size: 0.9rem;
+}
+
+body[data-verbose="false"] .controls-brief,
+body[data-verbose="false"] .controls-note,
+body[data-verbose="false"] .section-head p,
+body[data-verbose="false"] .chart-heading p,
+body[data-verbose="false"] .bar-note,
+body[data-verbose="false"] .page-note {
+  display: none;
+}
+
+body[data-verbose="false"] .controls-intro,
+body[data-verbose="false"] .section-head {
+  align-items: center;
+}
+
+body[data-verbose="false"] .status-line {
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
 }
 
 .section-head {
@@ -805,16 +839,45 @@ input[type="number"] {
 }
 
 #zoomLensDemo .probe-blur-disc {
-  fill: rgba(140, 63, 25, 0.22);
-  stroke: rgba(140, 63, 25, 0.24);
-  stroke-width: 1.5;
+  fill: rgba(140, 63, 25, 0.28);
+  stroke: rgba(140, 63, 25, 0.62);
+  stroke-width: 2;
 }
 
 #zoomLensDemo .coc-ring {
   fill: none;
   stroke: rgba(194, 106, 44, 0.96);
-  stroke-width: 2.5;
+  stroke-width: 3;
   stroke-dasharray: 6 5;
+}
+
+#zoomLensDemo .callout-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 2.5;
+}
+
+#zoomLensDemo .coc-line {
+  stroke: rgba(194, 106, 44, 0.96);
+}
+
+#zoomLensDemo .blur-line {
+  stroke: rgba(140, 63, 25, 0.86);
+}
+
+#zoomLensDemo .demo-tag {
+  font-family: "Avenir Next", "Trebuchet MS", sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+#zoomLensDemo .coc-tag {
+  fill: rgba(194, 106, 44, 0.98);
+}
+
+#zoomLensDemo .blur-tag {
+  fill: rgba(140, 63, 25, 0.92);
 }
 
 .zoom-scale {

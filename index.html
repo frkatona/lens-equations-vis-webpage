@@ -58,6 +58,13 @@
         </div>
 
         <div class="drawer-group">
+          <label class="drawer-toggle" for="verboseToggle">
+            <span class="drawer-label">Verbose</span>
+            <input id="verboseToggle" type="checkbox" />
+          </label>
+        </div>
+
+        <div class="drawer-group">
           <div class="drawer-row">
             <label class="drawer-label" for="transparencyRange">
               Window transparency
@@ -525,14 +532,20 @@
                 s' = 88.8 mm
               </text>
 
+              <line id="zoomBlurLeader" class="callout-line blur-line" x1="500" y1="150" x2="446" y2="184"></line>
+              <text class="demo-tag blur-tag" id="zoomBlurText" x="438" y="188" text-anchor="end">
+                blur
+              </text>
+
               <circle id="zoomProbeBlurDisc" class="probe-blur-disc" cx="514" cy="140" r="14"></circle>
               <circle id="zoomCocRing" class="coc-ring" cx="514" cy="140" r="7"></circle>
+              <line id="zoomCocLeader" class="callout-line coc-line" x1="506" y1="132" x2="456" y2="106"></line>
+              <text class="demo-tag coc-tag" id="zoomCocText" x="448" y="110" text-anchor="end">
+                CoC
+              </text>
 
               <line id="zoomSensorPlane" class="sensor-plane" x1="514" y1="72" x2="514" y2="208"></line>
               <text class="demo-label" id="zoomSensorLabel" x="520" y="88">sensor</text>
-              <text class="demo-label" id="zoomCocText" x="514" y="204" text-anchor="middle">
-                CoC c = 0.030 mm
-              </text>
               <text class="demo-label" x="174" y="66">moving lens groups</text>
               <text class="demo-label" id="zoomFieldText" x="48" y="60">wide field</text>
             </svg>

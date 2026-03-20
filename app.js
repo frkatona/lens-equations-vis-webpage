@@ -7,6 +7,7 @@ const DISPLAY_STORAGE_KEY = "lens-equations-display";
 const DISPLAY_THEMES = ["sand", "slate", "forest"];
 const DISPLAY_DEFAULTS = Object.freeze({
   theme: "sand",
+  verbose: false,
   transparency: 20,
   width: 1320,
   blur: 18,
@@ -29,6 +30,7 @@ const elements = {
   displayMenuClose: document.getElementById("displayMenuClose"),
   displayScrim: document.getElementById("displayScrim"),
   displayDrawer: document.getElementById("displayDrawer"),
+  verboseToggle: document.getElementById("verboseToggle"),
   transparencyRange: document.getElementById("transparencyRange"),
   transparencyDisplay: document.getElementById("transparencyDisplay"),
   contentWidthRange: document.getElementById("contentWidthRange"),
@@ -95,7 +97,10 @@ const elements = {
   zoomSensorDistanceStartTick: document.getElementById("zoomSensorDistanceStartTick"),
   zoomSensorDistanceEndTick: document.getElementById("zoomSensorDistanceEndTick"),
   zoomSensorDistanceText: document.getElementById("zoomSensorDistanceText"),
+  zoomBlurLeader: document.getElementById("zoomBlurLeader"),
+  zoomBlurText: document.getElementById("zoomBlurText"),
   zoomProbeBlurDisc: document.getElementById("zoomProbeBlurDisc"),
+  zoomCocLeader: document.getElementById("zoomCocLeader"),
   zoomCocRing: document.getElementById("zoomCocRing"),
   zoomCocText: document.getElementById("zoomCocText"),
   zoomFieldCone: document.getElementById("zoomFieldCone"),
@@ -834,6 +839,11 @@ function updateZoomDemo(metrics) {
   const cocDisplayMax = Math.max(metrics.probeBlurMm, metrics.cocMm * 1.6, 0.06);
   const cocRadius = mapDemoRadiusMm(metrics.cocMm, cocDisplayMax, 6, 13);
   const probeBlurRadius = mapDemoRadiusMm(metrics.probeBlurMm, cocDisplayMax, 4, 28);
+  const cocLabelX = sensorX - 52;
+  const cocLabelY = Math.max(centerY - Math.max(cocRadius + 22, 34), 96);
+  const blurLabelX = sensorX - 62;
+  const blurLabelY = Math.min(centerY + Math.max(probeBlurRadius + 18, 42), 190);
+  const verbose = displayState.verbose;
 
   elements.zoomFrontGroup.setAttribute("cx", frontX.toFixed(1));
   elements.zoomFrontGroup.setAttribute("rx", (18 + zoom * 6).toFixed(1));
@@ -862,15 +872,27 @@ function updateZoomDemo(metrics) {
   elements.zoomSensorDistanceEndTick.setAttribute("x1", sensorX.toFixed(1));
   elements.zoomSensorDistanceEndTick.setAttribute("x2", sensorX.toFixed(1));
   elements.zoomSensorDistanceText.setAttribute("x", ((lensPlaneX + sensorX) / 2).toFixed(1));
-  elements.zoomSensorDistanceText.textContent = `s' = ${formatMillimeters(metrics.sensorDistanceMm)}`;
+  elements.zoomSensorDistanceText.textContent = verbose ? `s' = ${formatMillimeters(metrics.sensorDistanceMm)}` : `s' ${formatMillimeters(metrics.sensorDistanceMm)}`;
+  elements.zoomBlurLeader.setAttribute("x1", (sensorX - probeBlurRadius * 0.88).toFixed(1));
+  elements.zoomBlurLeader.setAttribute("y1", (centerY + probeBlurRadius * 0.32).toFixed(1));
+  elements.zoomBlurLeader.setAttribute("x2", (blurLabelX - 8).toFixed(1));
+  elements.zoomBlurLeader.setAttribute("y2", (blurLabelY - 4).toFixed(1));
+  elements.zoomBlurText.setAttribute("x", blurLabelX.toFixed(1));
+  elements.zoomBlurText.setAttribute("y", blurLabelY.toFixed(1));
+  elements.zoomBlurText.textContent = verbose ? `blur ${formatMillimeters(metrics.probeBlurMm)}` : "blur";
   elements.zoomProbeBlurDisc.setAttribute("cx", sensorX.toFixed(1));
   elements.zoomProbeBlurDisc.setAttribute("cy", centerY.toFixed(1));
   elements.zoomProbeBlurDisc.setAttribute("r", probeBlurRadius.toFixed(1));
+  elements.zoomCocLeader.setAttribute("x1", (sensorX - cocRadius * 0.72).toFixed(1));
+  elements.zoomCocLeader.setAttribute("y1", (centerY - cocRadius * 0.72).toFixed(1));
+  elements.zoomCocLeader.setAttribute("x2", (cocLabelX - 8).toFixed(1));
+  elements.zoomCocLeader.setAttribute("y2", (cocLabelY - 4).toFixed(1));
   elements.zoomCocRing.setAttribute("cx", sensorX.toFixed(1));
   elements.zoomCocRing.setAttribute("cy", centerY.toFixed(1));
   elements.zoomCocRing.setAttribute("r", cocRadius.toFixed(1));
-  elements.zoomCocText.setAttribute("x", sensorX.toFixed(1));
-  elements.zoomCocText.textContent = `CoC c = ${formatMillimeters(metrics.cocMm)}`;
+  elements.zoomCocText.setAttribute("x", cocLabelX.toFixed(1));
+  elements.zoomCocText.setAttribute("y", cocLabelY.toFixed(1));
+  elements.zoomCocText.textContent = verbose ? `CoC ${formatMillimeters(metrics.cocMm)}` : "CoC";
 
   const cone = [
     { x: sceneX, y: centerY - sceneHalfHeight },
@@ -910,8 +932,8 @@ function updateZoomDemo(metrics) {
   elements.zoomRayMid.setAttribute("d", svgPath(midRay));
   elements.zoomRayBottom.setAttribute("d", svgPath(bottomRay));
   elements.zoomStateLabel.textContent = zoomDescriptor(metrics.focalLengthMm);
-  elements.zoomFocalValue.textContent = `${metrics.focalLengthMm.toFixed(0)} mm effective`;
-  elements.zoomFieldText.textContent = `${fieldAngle.toFixed(0)} deg field slice`;
+  elements.zoomFocalValue.textContent = verbose ? `${metrics.focalLengthMm.toFixed(0)} mm effective` : `${metrics.focalLengthMm.toFixed(0)} mm`;
+  elements.zoomFieldText.textContent = verbose ? `${fieldAngle.toFixed(0)} deg field slice` : `${fieldAngle.toFixed(0)} deg`;
   setBarWidth(elements.zoomScaleFill, zoom);
   setMarkerLeft(elements.zoomScaleThumb, zoom);
 }
@@ -949,7 +971,9 @@ function updateDerivedMetrics() {
   elements.nearDofValue.textContent = formatDistanceMeters(dof.near / 1000);
   elements.farDofValue.textContent = Number.isFinite(dof.far) ? formatDistanceMeters(dof.far / 1000) : "Infinity";
   elements.totalDofValue.textContent = Number.isFinite(dof.total) ? formatDistanceMeters(dof.total / 1000) : "Infinity";
-  elements.summaryText.textContent = `${state.focalLength.toFixed(0)} mm | focus ${formatDistanceMeters(state.focusDistance)} | sensor ${formatMillimeters(sensorDistance)} | blur @ ${formatDistanceMeters(state.probeDistance)} = ${formatMillimeters(probeBlur)} | DOF ${Number.isFinite(dof.total) ? formatDistanceMeters(dof.total / 1000) : "Infinity"}`;
+  elements.summaryText.textContent = displayState.verbose
+    ? `${state.focalLength.toFixed(0)} mm | focus ${formatDistanceMeters(state.focusDistance)} | sensor ${formatMillimeters(sensorDistance)} | blur @ ${formatDistanceMeters(state.probeDistance)} = ${formatMillimeters(probeBlur)} | DOF ${Number.isFinite(dof.total) ? formatDistanceMeters(dof.total / 1000) : "Infinity"}`
+    : `${state.focalLength.toFixed(0)} mm | ${formatDistanceMeters(state.focusDistance)} | s' ${formatMillimeters(sensorDistance)} | DOF ${Number.isFinite(dof.total) ? formatDistanceMeters(dof.total / 1000) : "Infinity"}`;
 
   return metrics;
 }
@@ -1006,6 +1030,7 @@ function loadDisplaySettings() {
       return;
     }
     displayState.theme = DISPLAY_THEMES.includes(stored.theme) ? stored.theme : DISPLAY_DEFAULTS.theme;
+    displayState.verbose = typeof stored.verbose === "boolean" ? stored.verbose : DISPLAY_DEFAULTS.verbose;
     displayState.transparency = quantize(clamp(safeNumber(stored.transparency, DISPLAY_DEFAULTS.transparency), 0, 60));
     displayState.width = quantize(clamp(safeNumber(stored.width, DISPLAY_DEFAULTS.width), 960, 1600), 20);
     displayState.blur = quantize(clamp(safeNumber(stored.blur, DISPLAY_DEFAULTS.blur), 0, 28));
@@ -1032,6 +1057,7 @@ function syncThemeButtons() {
 }
 
 function syncDisplayControls() {
+  elements.verboseToggle.checked = displayState.verbose;
   elements.transparencyRange.value = displayState.transparency.toFixed(0);
   elements.transparencyDisplay.textContent = `${displayState.transparency.toFixed(0)}%`;
   elements.contentWidthRange.value = displayState.width.toFixed(0);
@@ -1079,6 +1105,7 @@ function applyDisplaySettings(shouldRedraw = false) {
   const statusAlpha = 0.68 - transparency * 0.24;
 
   document.body.dataset.theme = displayState.theme;
+  document.body.dataset.verbose = displayState.verbose ? "true" : "false";
   document.documentElement.style.setProperty("--page-max-width", `${displayState.width}px`);
   document.documentElement.style.setProperty("--glass-blur", `${displayState.blur}px`);
   document.documentElement.style.setProperty("--panel-radius", `${displayState.radius}px`);
@@ -1245,6 +1272,12 @@ elements.themeButtons.forEach((button) => {
     applyDisplaySettings(true);
     saveDisplaySettings();
   });
+});
+
+elements.verboseToggle.addEventListener("change", () => {
+  displayState.verbose = elements.verboseToggle.checked;
+  applyDisplaySettings(true);
+  saveDisplaySettings();
 });
 
 bindDisplayRange(elements.transparencyRange, "transparency", 0, 60);
