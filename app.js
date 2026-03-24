@@ -16,6 +16,7 @@ const DISTANCE_MARGIN_METERS = 0.02;
 const DISTANCE_FLOOR_METERS = 0.1;
 const MAX_PRACTICAL_FOCUS_MAGNIFICATION = 0.25;
 const BAR_SCALE_LIMITS = Object.freeze({
+  focusDistanceMm: { min: DISTANCE_FLOOR_METERS * 1000, max: DISTANCE_MAX_METERS * 1000 },
   imageDistanceMm: { min: 4, max: 10000 },
   magnificationAbs: { min: 0.0001, max: 30 },
   apertureDiameterMm: { min: 0.18, max: 250 },
@@ -69,24 +70,32 @@ const elements = {
   sceneBackgroundDisplay: document.getElementById("sceneBackgroundDisplay"),
   resetDisplayButton: document.getElementById("resetDisplayButton"),
   focalLengthRange: document.getElementById("focalLengthRange"),
+  focalLengthTicks: document.getElementById("focalLengthTicks"),
   focalLengthNumber: document.getElementById("focalLengthNumber"),
   focalLengthDisplay: document.getElementById("focalLengthDisplay"),
+  focalLengthLabel: document.getElementById("focalLengthLabel"),
   sensorDistanceRange: document.getElementById("sensorDistanceRange"),
   sensorDistanceNumber: document.getElementById("sensorDistanceNumber"),
   sensorDistanceDisplay: document.getElementById("sensorDistanceDisplay"),
+  sensorDistanceLabel: document.getElementById("sensorDistanceLabel"),
   focusDistanceRange: document.getElementById("focusDistanceRange"),
   focusDistanceNumber: document.getElementById("focusDistanceNumber"),
   focusDistanceDisplay: document.getElementById("focusDistanceDisplay"),
+  focusDistanceLabel: document.getElementById("focusDistanceLabel"),
   fNumberRange: document.getElementById("fNumberRange"),
+  fNumberTicks: document.getElementById("fNumberTicks"),
   fNumberNumber: document.getElementById("fNumberNumber"),
   fNumberDisplay: document.getElementById("fNumberDisplay"),
   fNumberLightLoss: document.getElementById("fNumberLightLoss"),
+  fNumberLabel: document.getElementById("fNumberLabel"),
   cocRange: document.getElementById("cocRange"),
   cocNumber: document.getElementById("cocNumber"),
   cocDisplay: document.getElementById("cocDisplay"),
+  cocLabel: document.getElementById("cocLabel"),
   probeDistanceRange: document.getElementById("probeDistanceRange"),
   probeDistanceNumber: document.getElementById("probeDistanceNumber"),
   probeDistanceDisplay: document.getElementById("probeDistanceDisplay"),
+  probeDistanceLabel: document.getElementById("probeDistanceLabel"),
   nearDofValue: document.getElementById("nearDofValue"),
   farDofValue: document.getElementById("farDofValue"),
   totalDofValue: document.getElementById("totalDofValue"),
@@ -138,10 +147,18 @@ const elements = {
   zoomScaleTrack: document.getElementById("zoomScaleTrack"),
   zoomScaleFill: document.getElementById("zoomScaleFill"),
   zoomScaleThumb: document.getElementById("zoomScaleThumb"),
+  scenePreviewReference: document.getElementById("scenePreviewReference"),
   scenePreview: document.getElementById("scenePreview"),
+  sceneReferenceForegroundZone: document.getElementById("sceneReferenceForegroundZone"),
+  sceneReferenceSubjectZone: document.getElementById("sceneReferenceSubjectZone"),
+  sceneReferenceBackgroundZone: document.getElementById("sceneReferenceBackgroundZone"),
   sceneBackgroundLayer: document.getElementById("sceneBackgroundLayer"),
   sceneSubjectLayer: document.getElementById("sceneSubjectLayer"),
   sceneForegroundLayer: document.getElementById("sceneForegroundLayer"),
+  sceneDistanceDragLayers: Array.from(document.querySelectorAll("[data-scene-distance-drag]")),
+  sceneForegroundChip: document.getElementById("sceneForegroundChip"),
+  sceneSubjectChip: document.getElementById("sceneSubjectChip"),
+  sceneBackgroundChip: document.getElementById("sceneBackgroundChip"),
   sceneForegroundDistanceText: document.getElementById("sceneForegroundDistanceText"),
   sceneSubjectDistanceText: document.getElementById("sceneSubjectDistanceText"),
   sceneBackgroundDistanceText: document.getElementById("sceneBackgroundDistanceText"),
@@ -279,6 +296,25 @@ function unmapLogSlider(value, min, max) {
     return 1000;
   }
   return (Math.log(value / min) / Math.log(max / min)) * 1000;
+}
+
+function sliderPercentForLogValue(value, min, max) {
+  return clamp(unmapLogSlider(value, min, max) / 10, 0, 100);
+}
+
+function populateRangeTicks(container, allowedValues, min, max) {
+  if (!container) {
+    return;
+  }
+
+  const ticks = allowedValues.map((value) => {
+    const tick = document.createElement("span");
+    tick.className = "range-tick";
+    tick.style.setProperty("--tick-position", sliderPercentForLogValue(value, min, max).toFixed(4));
+    return tick;
+  });
+
+  container.replaceChildren(...ticks);
 }
 
 function imageDistanceMm(focalLengthMm, subjectDistanceMm) {
@@ -864,16 +900,16 @@ function setSceneLayerDepth(element, blurPx, baseScale = 1) {
 }
 
 function updateOutputBars(metrics) {
-  const imageDistanceScale = BAR_SCALE_LIMITS.imageDistanceMm;
+  const focusDistanceScale = BAR_SCALE_LIMITS.focusDistanceMm;
   const magnificationScale = BAR_SCALE_LIMITS.magnificationAbs;
   const apertureScale = BAR_SCALE_LIMITS.apertureDiameterMm;
   const probeBlurScale = BAR_SCALE_LIMITS.probeBlurMm;
   const totalDofScale = BAR_SCALE_LIMITS.totalDofMm;
   const hyperfocalScale = BAR_SCALE_LIMITS.hyperfocalMm;
 
-  elements.imageDistanceBarValue.textContent = formatMillimeters(metrics.imageDistanceMm);
-  setBarHeight(elements.imageDistanceBar, scaleLogBar(metrics.imageDistanceMm, imageDistanceScale.min, imageDistanceScale.max));
-  elements.imageDistanceNote.textContent = `fixed log ${formatMillimeters(imageDistanceScale.min)} to ${formatMillimeters(imageDistanceScale.max)}`;
+  elements.imageDistanceBarValue.textContent = formatDistanceMeters(metrics.focusDistanceMeters);
+  setBarHeight(elements.imageDistanceBar, scaleLogBar(metrics.focusDistanceMm, focusDistanceScale.min, focusDistanceScale.max));
+  elements.imageDistanceNote.textContent = `fixed log ${formatDistanceMeters(focusDistanceScale.min / 1000)} to ${formatDistanceMeters(focusDistanceScale.max / 1000)}`;
 
   elements.magnificationBarValue.textContent = formatMagnification(metrics.magnification);
   setBarHeight(elements.magnificationBar, scaleLogBar(Math.abs(metrics.magnification), magnificationScale.min, magnificationScale.max));
@@ -972,6 +1008,7 @@ function updateZoomDemo(metrics) {
   elements.zoomSensorDistanceEndTick.setAttribute("x1", sensorX.toFixed(1));
   elements.zoomSensorDistanceEndTick.setAttribute("x2", sensorX.toFixed(1));
   elements.zoomSensorDistanceText.setAttribute("x", ((lensPlaneX + sensorX) / 2).toFixed(1));
+  elements.zoomSensorDistanceText.setAttribute("y", "250");
   elements.zoomSensorDistanceText.textContent = verbose ? `s' = ${formatMillimeters(metrics.sensorDistanceMm)}` : `s' ${formatMillimeters(metrics.sensorDistanceMm)}`;
   elements.zoomProjectionSlice.setAttribute("x1", sensorX.toFixed(1));
   elements.zoomProjectionSlice.setAttribute("x2", sensorX.toFixed(1));
@@ -1123,7 +1160,7 @@ function updateHelpText(metrics, sceneMetrics) {
   setHelp(helpTargets.farDofPill, helpText("Far depth-of-field limit.", hyperfocalEquation, farEquation));
   setHelp(helpTargets.totalDofPill, helpText("Total depth of field.", nearEquation, farEquation, totalEquation));
 
-  setHelp(helpTargets.imageDistanceBar, helpText("Image distance s'.", "Computed from the thin-lens equation.", `s' = f s / (s - f) = ${formatMillimeters(metrics.imageDistanceMm)}.`));
+  setHelp(helpTargets.imageDistanceBar, helpText("Focus distance s.", `Current s = ${formatDistanceMeters(metrics.focusDistanceMeters)}.`, "This is the subject distance currently locked in by the sensor-position setting.", "Adjusting s' moves this value through the thin-lens equation."));
   setHelp(helpTargets.magnificationBar, helpText("Magnification m.", `m = -s' / s = ${formatMagnification(metrics.magnification)}.`, "The bar uses |m| so the size change stays easy to compare."));
   setHelp(helpTargets.apertureBar, helpText("Aperture diameter D.", `D = f / N = ${formatMillimeters(metrics.apertureDiameterMm)}.`, "This is the effective opening size used in the blur calculation."));
   setHelp(helpTargets.probeBlurBar, helpText("Probe blur c(z).", `z' = f z / (z - f) = ${probeImageText}.`, `c(z) = D |s'_focus - z'| / z' = ${formatMillimeters(metrics.probeBlurMm)}.`, `The threshold marker is the CoC limit: ${formatMillimeters(metrics.cocMm)}.`));
@@ -1131,7 +1168,7 @@ function updateHelpText(metrics, sceneMetrics) {
   setHelp(helpTargets.hyperfocalBar, helpText("Hyperfocal distance H.", "This is the focus distance that pushes the far DOF limit to Infinity.", hyperfocalEquation));
 
   setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, `The moving sensor plane and dimension line show s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, "The rear rays keep a fixed exit angle, and the teal span shows the projected image height at the sensor plane.", "If that span is shorter than the sensor, the image fits inside it; if it runs past the sensor ends, the sensor is cropping the projection.", `The amber ring marks the CoC threshold c = ${formatMillimeters(metrics.cocMm)} and the filled disc shows the current probe blur.`, "Approximate field slice: 2 * atan(sensor_half / f)."));
-  setHelp([helpTargets.sceneCard, elements.scenePreview], helpText("Scene blur comparison.", "Left panel stays sharp as a before view; right panel applies the live optical blur.", `Foreground plane is around ${formatDistanceMeters(sceneMetrics.foregroundDistance)} with blur ${formatMillimeters(sceneMetrics.foregroundBlurMm)}.`, `Subject plane follows z = ${formatDistanceMeters(sceneMetrics.subjectDistance)} with blur ${formatMillimeters(sceneMetrics.subjectBlurMm)}.`, `Background plane is around ${formatDistanceMeters(sceneMetrics.backgroundDistance)} with blur ${formatMillimeters(sceneMetrics.backgroundBlurMm)}.`, "Each layer uses the current thin-lens blur from the live f, N, s, z, and CoC settings."));
+  setHelp([helpTargets.sceneCard, elements.scenePreview], helpText("Scene blur comparison.", "Left panel stays sharp as a before view; right panel applies the live optical blur.", `Foreground plane is around ${formatDistanceMeters(sceneMetrics.foregroundDistance)} with blur ${formatMillimeters(sceneMetrics.foregroundBlurMm)}.`, `Subject plane follows z = ${formatDistanceMeters(sceneMetrics.subjectDistance)} with blur ${formatMillimeters(sceneMetrics.subjectBlurMm)}.`, `Background plane is around ${formatDistanceMeters(sceneMetrics.backgroundDistance)} with blur ${formatMillimeters(sceneMetrics.backgroundBlurMm)}.`, "The before view uses left, center, and right thirds for foreground, subject, and background dragging.", "Each layer uses the current thin-lens blur from the live f, N, s, z, and CoC settings."));
   setHelp([helpTargets.imageChartCard, elements.imageChart], helpText("Image distance chart.", "Y-axis equation: s' = f s / (s - f).", "The focus marker shows the currently selected subject distance s."));
   setHelp([helpTargets.magnificationChartCard, elements.magnificationChart], helpText("Magnification chart.", "Y-axis equation: |m| = |-s' / s|.", "The bar values keep the sign, but the plot shows magnitude only."));
   setHelp([helpTargets.blurChartCard, elements.blurChart], helpText("Blur and depth-of-field chart.", "Blur equation: c(z) = D |s'_focus - z'| / z', with z' = f z / (z - f).", "The shaded region is where c(z) <= CoC.", `Current CoC threshold: ${formatMillimeters(metrics.cocMm)}.`));
@@ -1274,9 +1311,16 @@ function syncPresetButtons() {
 function syncControls() {
   const minDistance = distanceMinMeters();
   const sensorBounds = sensorDistanceBoundsMm(state.focalLength);
+  const verbose = displayState.verbose;
   state.focusDistance = clamp(state.focusDistance, minDistance, DISTANCE_MAX_METERS);
   state.probeDistance = clamp(state.probeDistance, minDistance, DISTANCE_MAX_METERS);
   const sensorDistance = imageDistanceMm(state.focalLength, state.focusDistance * 1000);
+  elements.focalLengthLabel.textContent = verbose ? "f (focal length)" : "f";
+  elements.fNumberLabel.textContent = verbose ? "N (f-number)" : "N";
+  elements.focusDistanceLabel.textContent = verbose ? "s (focus distance)" : "s";
+  elements.sensorDistanceLabel.textContent = verbose ? "s' (sensor distance)" : "s'";
+  elements.cocLabel.textContent = verbose ? "CoC (circle of confusion)" : "CoC";
+  elements.probeDistanceLabel.textContent = verbose ? "z (probe distance)" : "z";
   elements.focalLengthRange.value = unmapLogSlider(state.focalLength, FOCAL_LENGTH_MIN_MM, FOCAL_LENGTH_MAX_MM).toFixed(0);
   elements.focalLengthNumber.value = state.focalLength.toFixed(0);
   elements.focalLengthDisplay.textContent = `${state.focalLength.toFixed(0)} mm`;
@@ -1307,6 +1351,7 @@ function syncControls() {
 
 function render() {
   syncControls();
+  syncDisplayControls();
   const metrics = updateDerivedMetrics();
   updateZoomDemo(metrics);
   const sceneMetrics = updateScenePreview(metrics);
@@ -1433,6 +1478,136 @@ function bindDisplayDistanceRange(rangeElement, key) {
   });
 }
 
+let activeSceneDistanceDrag = null;
+let activeSceneReferenceZone = "";
+
+function setActiveSceneReferenceZone(key) {
+  activeSceneReferenceZone = key === "foreground" || key === "subject" || key === "background" ? key : "";
+  [
+    ["foreground", elements.sceneReferenceForegroundZone, elements.sceneForegroundChip],
+    ["subject", elements.sceneReferenceSubjectZone, elements.sceneSubjectChip],
+    ["background", elements.sceneReferenceBackgroundZone, elements.sceneBackgroundChip],
+  ].forEach(([zoneKey, zoneElement, chipElement]) => {
+    const isActive = zoneKey === activeSceneReferenceZone;
+    zoneElement?.classList.toggle("is-active", isActive);
+    chipElement?.classList.toggle("is-active", isActive);
+  });
+}
+
+function sceneReferenceZoneKeyFromClientX(clientX) {
+  if (!elements.scenePreviewReference) {
+    return "";
+  }
+
+  const bounds = elements.scenePreviewReference.getBoundingClientRect();
+  if (bounds.width <= 0) {
+    return "";
+  }
+
+  const relativeX = clamp(clientX - bounds.left, 0, Math.max(bounds.width - 1, 0));
+  const thirdWidth = bounds.width / 3;
+  if (relativeX < thirdWidth) {
+    return "foreground";
+  }
+  if (relativeX < thirdWidth * 2) {
+    return "subject";
+  }
+  return "background";
+}
+
+function readSceneDistanceValue(key) {
+  if (key === "foreground") {
+    return displayState.foregroundDistance;
+  }
+  if (key === "background") {
+    return displayState.backgroundDistance;
+  }
+  return state.probeDistance;
+}
+
+function writeSceneDistanceValue(key, nextDistance) {
+  if (key === "foreground") {
+    displayState.foregroundDistance = nextDistance;
+  } else if (key === "background") {
+    displayState.backgroundDistance = nextDistance;
+  } else {
+    state.probeDistance = nextDistance;
+  }
+}
+
+function sceneDistanceFromDrag(startDistance, startMinDistance, deltaPx, widthPx) {
+  const safeWidth = Math.max(widthPx, 1);
+  const safeMinDistance = Math.max(startMinDistance, DISTANCE_FLOOR_METERS);
+  const rangeRatio = DISTANCE_MAX_METERS / safeMinDistance;
+  return clamp(startDistance * Math.pow(rangeRatio, deltaPx / safeWidth), safeMinDistance, DISTANCE_MAX_METERS);
+}
+
+function beginSceneDistanceDrag(key, event) {
+  if (event.pointerType === "mouse" && event.button !== 0) {
+    return;
+  }
+
+  event.preventDefault();
+  activeSceneDistanceDrag = {
+    key,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startDistance: readSceneDistanceValue(key),
+    startMinDistance: distanceMinMeters(),
+    element: event.currentTarget,
+    previewElement: event.currentTarget.ownerSVGElement || elements.scenePreview,
+  };
+  activeSceneDistanceDrag.element.classList.add("is-dragging");
+  if (activeSceneDistanceDrag.previewElement === elements.scenePreviewReference) {
+    setActiveSceneReferenceZone(key);
+  }
+  if (typeof activeSceneDistanceDrag.element.setPointerCapture === "function") {
+    activeSceneDistanceDrag.element.setPointerCapture(event.pointerId);
+  }
+}
+
+function updateSceneDistanceDrag(event) {
+  if (!activeSceneDistanceDrag || event.pointerId !== activeSceneDistanceDrag.pointerId) {
+    return;
+  }
+
+  const previewWidth = activeSceneDistanceDrag.previewElement.getBoundingClientRect().width;
+  const nextDistance = sceneDistanceFromDrag(
+    activeSceneDistanceDrag.startDistance,
+    activeSceneDistanceDrag.startMinDistance,
+    event.clientX - activeSceneDistanceDrag.startX,
+    previewWidth,
+  );
+  if (activeSceneDistanceDrag.previewElement === elements.scenePreviewReference) {
+    setActiveSceneReferenceZone(activeSceneDistanceDrag.key);
+  }
+  writeSceneDistanceValue(activeSceneDistanceDrag.key, nextDistance);
+  render();
+}
+
+function endSceneDistanceDrag(event) {
+  if (!activeSceneDistanceDrag || event.pointerId !== activeSceneDistanceDrag.pointerId) {
+    return;
+  }
+
+  const dragState = activeSceneDistanceDrag;
+  dragState.element.classList.remove("is-dragging");
+  if (
+    typeof dragState.element.releasePointerCapture === "function" &&
+    dragState.element.hasPointerCapture?.(event.pointerId)
+  ) {
+    dragState.element.releasePointerCapture(event.pointerId);
+  }
+  const shouldPersistDisplayDistance = dragState.key !== "subject";
+  if (dragState.previewElement === elements.scenePreviewReference) {
+    setActiveSceneReferenceZone("");
+  }
+  activeSceneDistanceDrag = null;
+  if (shouldPersistDisplayDistance) {
+    saveDisplaySettings();
+  }
+}
+
 bindSnappedLogPair(
   elements.focalLengthRange,
   elements.focalLengthNumber,
@@ -1453,6 +1628,8 @@ bindPresetReset(elements.focusDistanceRange, "focusDistance");
 bindPresetReset(elements.fNumberRange, "fNumber");
 bindPresetReset(elements.cocRange, "coc");
 bindPresetReset(elements.probeDistanceRange, "probeDistance");
+populateRangeTicks(elements.focalLengthTicks, COMMON_FOCAL_LENGTHS_MM, FOCAL_LENGTH_MIN_MM, FOCAL_LENGTH_MAX_MM);
+populateRangeTicks(elements.fNumberTicks, COMMON_F_NUMBERS, F_NUMBER_MIN, F_NUMBER_MAX);
 
 elements.presetButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -1503,6 +1680,28 @@ bindDisplayRange(elements.blurStrengthRange, "blur", 0, 28);
 bindDisplayRange(elements.radiusRange, "radius", 18, 34);
 bindDisplayDistanceRange(elements.sceneForegroundRange, "foregroundDistance");
 bindDisplayDistanceRange(elements.sceneBackgroundRange, "backgroundDistance");
+elements.sceneDistanceDragLayers.forEach((layer) => {
+  const key = layer.dataset.sceneDistanceDrag;
+  if (!key) {
+    return;
+  }
+  layer.addEventListener("pointerdown", (event) => beginSceneDistanceDrag(key, event));
+});
+elements.scenePreviewReference.addEventListener("pointermove", (event) => {
+  if (activeSceneDistanceDrag?.previewElement === elements.scenePreviewReference) {
+    return;
+  }
+  setActiveSceneReferenceZone(sceneReferenceZoneKeyFromClientX(event.clientX));
+});
+elements.scenePreviewReference.addEventListener("pointerleave", () => {
+  if (activeSceneDistanceDrag?.previewElement === elements.scenePreviewReference) {
+    return;
+  }
+  setActiveSceneReferenceZone("");
+});
+window.addEventListener("pointermove", updateSceneDistanceDrag);
+window.addEventListener("pointerup", endSceneDistanceDrag);
+window.addEventListener("pointercancel", endSceneDistanceDrag);
 
 elements.resetDisplayButton.addEventListener("click", () => {
   Object.assign(displayState, DISPLAY_DEFAULTS);

@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Lens Equation Atlas</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -150,7 +151,7 @@
           />
         </div>
 
-        <div class="drawer-group">
+        <div class="drawer-group drawer-group-scene-break">
           <div class="drawer-row">
             <label class="drawer-label" for="sceneForegroundRange">
               Foreground distance
@@ -195,7 +196,6 @@
         <section class="panel controls-panel">
           <div class="controls-intro">
             <div class="controls-copy">
-              <p class="eyebrow">Interactive optics playground</p>
               <h2>inputs</h2>
             </div>
             <p class="controls-brief">
@@ -237,18 +237,21 @@
               <div class="controls-group-inner">
                 <div class="control">
                   <div class="control-top">
-                    <label for="focalLengthRange">f</label>
+                    <label id="focalLengthLabel" for="focalLengthRange">f</label>
                     <output id="focalLengthDisplay">85 mm</output>
                   </div>
                   <div class="control-inputs">
-                    <input
-                      id="focalLengthRange"
-                      type="range"
-                      min="0"
-                      max="1000"
-                      step="1"
-                      value="0"
-                    />
+                    <div class="range-input-shell range-input-shell-ticked">
+                      <input
+                        id="focalLengthRange"
+                        type="range"
+                        min="0"
+                        max="1000"
+                        step="1"
+                        value="0"
+                      />
+                      <div class="range-ticks" id="focalLengthTicks" aria-hidden="true"></div>
+                    </div>
                     <input
                       id="focalLengthNumber"
                       type="number"
@@ -262,18 +265,21 @@
 
                 <div class="control">
                   <div class="control-top">
-                    <label for="fNumberRange">N</label>
+                    <label id="fNumberLabel" for="fNumberRange">N</label>
                     <output id="fNumberDisplay">f/2.0</output>
                   </div>
                   <div class="control-inputs">
-                    <input
-                      id="fNumberRange"
-                      type="range"
-                      min="0"
-                      max="1000"
-                      step="1"
-                      value="0"
-                    />
+                    <div class="range-input-shell range-input-shell-ticked">
+                      <input
+                        id="fNumberRange"
+                        type="range"
+                        min="0"
+                        max="1000"
+                        step="1"
+                        value="0"
+                      />
+                      <div class="range-ticks" id="fNumberTicks" aria-hidden="true"></div>
+                    </div>
                     <input
                       id="fNumberNumber"
                       type="number"
@@ -291,9 +297,9 @@
             <div class="controls-group">
               <span class="controls-group-label">focus</span>
               <div class="controls-group-inner">
-                <div class="control">
+                <div class="control is-hidden">
                   <div class="control-top">
-                    <label for="focusDistanceRange">s</label>
+                    <label id="focusDistanceLabel" for="focusDistanceRange">s</label>
                     <output id="focusDistanceDisplay">2.00 m</output>
                   </div>
                   <div class="control-inputs">
@@ -318,7 +324,7 @@
 
                 <div class="control">
                   <div class="control-top">
-                    <label for="sensorDistanceRange">s'</label>
+                    <label id="sensorDistanceLabel" for="sensorDistanceRange">s'</label>
                     <output id="sensorDistanceDisplay">88.8 mm</output>
                   </div>
                   <div class="control-inputs">
@@ -348,7 +354,7 @@
               <div class="controls-group-inner">
                 <div class="control">
                   <div class="control-top">
-                    <label for="cocRange">CoC</label>
+                    <label id="cocLabel" for="cocRange">CoC</label>
                     <output id="cocDisplay">0.030 mm</output>
                   </div>
                   <div class="control-inputs">
@@ -371,9 +377,9 @@
                   </div>
                 </div>
 
-                <div class="control">
+                <div class="control is-hidden">
                   <div class="control-top">
-                    <label for="probeDistanceRange">z</label>
+                    <label id="probeDistanceLabel" for="probeDistanceRange">z</label>
                     <output id="probeDistanceDisplay">3.00 m</output>
                   </div>
                   <div class="control-inputs">
@@ -482,45 +488,54 @@
                       class="scene-grass"
                       d="M0 280 L0 228 C24 214 34 246 46 208 C58 170 76 238 92 196 C108 154 124 238 136 208 C148 178 164 238 180 214 L180 280 Z"
                     ></path>
-                    <path
-                      class="scene-grass alt"
-                      d="M760 280 L760 214 C742 206 730 248 718 214 C706 180 692 244 678 202 C664 160 650 248 638 214 C626 180 610 244 592 222 L592 280 Z"
-                    ></path>
-                    <path class="scene-branch alt" d="M708 278 C690 238 676 204 664 160 C650 112 628 84 596 58"></path>
-                    <g class="scene-flower" transform="translate(596 58) rotate(16)">
-                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.6" ry="8.2"></ellipse>
-                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.4" ry="7.8" transform="rotate(72)"></ellipse>
-                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.6" ry="8.2" transform="rotate(144)"></ellipse>
-                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.4" ry="7.8" transform="rotate(216)"></ellipse>
-                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.6" ry="8.2" transform="rotate(288)"></ellipse>
-                      <circle class="scene-flower-center" cx="0" cy="0" r="3.1"></circle>
-                    </g>
-                    <ellipse class="scene-leaf" cx="620" cy="92" rx="16" ry="9" transform="rotate(-28 620 92)"></ellipse>
-                    <ellipse class="scene-leaf alt" cx="642" cy="128" rx="16" ry="9" transform="rotate(18 642 128)"></ellipse>
                   </g>
 
-                  <path class="scene-distance-line" d="M 164 42 Q 138 68 112 112"></path>
-                  <circle class="scene-distance-dot" cx="112" cy="112" r="5"></circle>
-                  <g class="scene-distance-chip" transform="translate(18 20)">
-                    <rect width="190" height="32" rx="16"></rect>
+                  <g id="sceneReferenceZones">
+                    <rect
+                      id="sceneReferenceForegroundZone"
+                      class="scene-interaction-zone"
+                      x="0"
+                      y="0"
+                      width="253.34"
+                      height="280"
+                      data-scene-distance-drag="foreground"
+                    ></rect>
+                    <rect
+                      id="sceneReferenceSubjectZone"
+                      class="scene-interaction-zone"
+                      x="253.34"
+                      y="0"
+                      width="253.33"
+                      height="280"
+                      data-scene-distance-drag="subject"
+                    ></rect>
+                    <rect
+                      id="sceneReferenceBackgroundZone"
+                      class="scene-interaction-zone"
+                      x="506.67"
+                      y="0"
+                      width="253.33"
+                      height="280"
+                      data-scene-distance-drag="background"
+                    ></rect>
+                  </g>
+
+                  <g id="sceneForegroundChip" class="scene-distance-chip" transform="translate(14 242)">
+                    <rect width="226" height="32" rx="16"></rect>
                     <text id="sceneForegroundDistanceText" class="scene-distance-text" x="14" y="21">
                       foreground 1.74 m
                     </text>
                   </g>
 
-                  <path class="scene-distance-line" d="M 380 46 Q 392 80 394 126"></path>
-                  <circle class="scene-distance-dot" cx="394" cy="126" r="5"></circle>
-                  <g class="scene-distance-chip" transform="translate(284 20)">
-                    <rect width="192" height="32" rx="16"></rect>
+                  <g id="sceneSubjectChip" class="scene-distance-chip" transform="translate(267 242)">
+                    <rect width="226" height="32" rx="16"></rect>
                     <text id="sceneSubjectDistanceText" class="scene-distance-text" x="14" y="21">
                       subject 3.00 m
                     </text>
                   </g>
 
-                  <path class="scene-distance-line" d="M 602 44 Q 594 78 568 128"></path>
-                  <circle class="scene-distance-dot" cx="568" cy="128" r="5"></circle>
-                  <g class="scene-distance-chip" transform="translate(504 20)">
-                    <rect width="208" height="32" rx="16"></rect>
+                  <g id="sceneBackgroundChip" class="scene-distance-chip" transform="translate(520 242)">
+                    <rect width="226" height="32" rx="16"></rect>
                     <text id="sceneBackgroundDistanceText" class="scene-distance-text" x="14" y="21">
                       background 6.60 m
                     </text>
@@ -560,7 +575,11 @@
                     d="M 344 280 C 360 240 390 216 432 200 C 494 176 600 176 760 184 L 760 280 Z"
                   ></path>
 
-                  <g id="sceneBackgroundLayer" class="scene-depth-layer">
+                  <g
+                    id="sceneBackgroundLayer"
+                    class="scene-depth-layer"
+                    data-scene-distance-drag="background"
+                  >
                     <path
                       class="scene-mountain-back"
                       d="M0 186 L92 122 L166 162 L254 110 L340 166 L448 118 L540 160 L628 108 L760 176 L760 280 L0 280 Z"
@@ -579,7 +598,7 @@
                     </g>
                   </g>
 
-                  <g id="sceneSubjectLayer" class="scene-depth-layer">
+                  <g id="sceneSubjectLayer" class="scene-depth-layer" data-scene-distance-drag="subject">
                     <ellipse class="scene-subject-shadow" cx="390" cy="232" rx="46" ry="12"></ellipse>
                     <circle class="scene-subject-head" cx="394" cy="142" r="13"></circle>
                     <path
@@ -589,7 +608,11 @@
                     <path class="scene-subject-accent" d="M399 157 L412 163 L407 178 L394 173 Z"></path>
                   </g>
 
-                  <g id="sceneForegroundLayer" class="scene-depth-layer">
+                  <g
+                    id="sceneForegroundLayer"
+                    class="scene-depth-layer"
+                    data-scene-distance-drag="foreground"
+                  >
                     <path class="scene-branch" d="M48 278 C76 232 84 178 92 130 C98 90 108 66 132 34"></path>
                     <g class="scene-flower" transform="translate(132 34) rotate(-18)">
                       <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.6" ry="8.2"></ellipse>
@@ -607,21 +630,6 @@
                       class="scene-grass"
                       d="M0 280 L0 228 C24 214 34 246 46 208 C58 170 76 238 92 196 C108 154 124 238 136 208 C148 178 164 238 180 214 L180 280 Z"
                     ></path>
-                    <path
-                      class="scene-grass alt"
-                      d="M760 280 L760 214 C742 206 730 248 718 214 C706 180 692 244 678 202 C664 160 650 248 638 214 C626 180 610 244 592 222 L592 280 Z"
-                    ></path>
-                    <path class="scene-branch alt" d="M708 278 C690 238 676 204 664 160 C650 112 628 84 596 58"></path>
-                    <g class="scene-flower" transform="translate(596 58) rotate(16)">
-                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.6" ry="8.2"></ellipse>
-                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.4" ry="7.8" transform="rotate(72)"></ellipse>
-                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.6" ry="8.2" transform="rotate(144)"></ellipse>
-                      <ellipse class="scene-flower-petal" cx="0" cy="-7" rx="4.4" ry="7.8" transform="rotate(216)"></ellipse>
-                      <ellipse class="scene-flower-petal alt" cx="0" cy="-7" rx="4.6" ry="8.2" transform="rotate(288)"></ellipse>
-                      <circle class="scene-flower-center" cx="0" cy="0" r="3.1"></circle>
-                    </g>
-                    <ellipse class="scene-leaf" cx="620" cy="92" rx="16" ry="9" transform="rotate(-28 620 92)"></ellipse>
-                    <ellipse class="scene-leaf alt" cx="642" cy="128" rx="16" ry="9" transform="rotate(18 642 128)"></ellipse>
                   </g>
                 </svg>
               </figure>
@@ -652,10 +660,6 @@
 
               <rect class="demo-stage" x="20" y="26" width="580" height="228" rx="28"></rect>
               <line class="demo-axis" x1="48" y1="140" x2="574" y2="140"></line>
-
-              <g id="zoomSceneTree" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(10, 110)">
-                <path d="M10,30 L10,36 M4,26 C4,18 16,18 16,26 C16,30 4,30 4,26 Z"></path>
-              </g>
 
               <path id="zoomFieldCone" class="field-cone" d=""></path>
               <path id="zoomRayTop" class="ray ray-top" d=""></path>
@@ -705,9 +709,8 @@
               <line id="zoomSensorDistanceEndTick" class="dimension-tick" x1="514" y1="218" x2="514" y2="230"></line>
 
               <text class="demo-label" id="zoomSensorLabel" x="520" y="88">sensor</text>
-              <text class="demo-label" x="174" y="66">moving lens groups</text>
               <text class="demo-label" id="zoomFieldText" x="42" y="248">wide field</text>
-              <text class="demo-label" id="zoomSensorDistanceText" x="470" y="238" text-anchor="middle">s' = 88.8 mm</text>
+              <text class="demo-label" id="zoomSensorDistanceText" x="470" y="250" text-anchor="middle">s' = 88.8 mm</text>
             </svg>
 
             <div class="zoom-scale">
@@ -748,12 +751,12 @@
 
             <div class="bar-grid" aria-label="Derived output bar graph">
               <div class="bar-column">
-                <strong class="bar-value" id="imageDistanceBarValue">88.8 mm</strong>
+                <strong class="bar-value" id="imageDistanceBarValue">2.00 m</strong>
                 <div class="bar-plot">
                   <div class="bar-fill amber" id="imageDistanceBar"></div>
                 </div>
-                <span class="bar-label">s'</span>
-                <span class="bar-note" id="imageDistanceNote">close-focus range</span>
+                <span class="bar-label">s</span>
+                <span class="bar-note" id="imageDistanceNote">focus distance range</span>
               </div>
 
               <div class="bar-column">

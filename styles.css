@@ -57,6 +57,8 @@
   --scene-foreground: #305332;
   --scene-foreground-alt: #607b46;
   --scene-haze: rgba(255, 255, 255, 0.18);
+  --scene-zone-highlight: rgba(27, 42, 50, 0.06);
+  --scene-zone-stroke: rgba(27, 42, 50, 0.12);
 }
 
 body[data-theme="slate"] {
@@ -144,6 +146,8 @@ body[data-theme="midnight"] {
   --scene-foreground: #579691;
   --scene-foreground-alt: #947452;
   --scene-haze: rgba(232, 241, 255, 0.08);
+  --scene-zone-highlight: rgba(232, 241, 255, 0.08);
+  --scene-zone-stroke: rgba(232, 241, 255, 0.18);
 }
 
 body[data-theme="ember"] {
@@ -299,7 +303,7 @@ body::before {
 h2,
 h3 {
   margin: 0;
-  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-family: "Segoe UI", sans-serif;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -435,6 +439,22 @@ h3 {
   margin-top: 0.85rem;
   padding-top: 0.85rem;
   border-top: 1px solid rgba(27, 42, 50, 0.08);
+}
+
+.drawer-group-scene-break {
+  margin-top: 1.2rem;
+  padding-top: 1.15rem;
+  border-top-color: rgba(27, 42, 50, 0.14);
+}
+
+.drawer-group-scene-break::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(27, 42, 50, 0.2), transparent);
 }
 
 .drawer-label {
@@ -739,6 +759,10 @@ body[data-verbose="false"] .status-line {
   border: 1px solid rgba(27, 42, 50, 0.08);
 }
 
+.control.is-hidden {
+  display: none;
+}
+
 .control-top {
   display: flex;
   justify-content: space-between;
@@ -749,6 +773,15 @@ body[data-verbose="false"] .status-line {
 .control-top label {
   font-size: 0.92rem;
   font-weight: 700;
+}
+
+body[data-verbose="true"] .control-top {
+  align-items: flex-start;
+}
+
+body[data-verbose="true"] .control-top label {
+  max-width: 14ch;
+  line-height: 1.2;
 }
 
 .control-top output {
@@ -764,6 +797,44 @@ body[data-verbose="false"] .status-line {
   gap: 0;
   align-items: center;
   margin-top: 0.7rem;
+}
+
+.range-input-shell {
+  position: relative;
+}
+
+.range-input-shell-ticked {
+  padding-block: 0.12rem 0.44rem;
+}
+
+.range-input-shell-ticked input[type="range"] {
+  display: block;
+  margin: 0;
+  position: relative;
+  z-index: 2;
+  background: transparent;
+}
+
+.range-ticks {
+  position: absolute;
+  inset: auto 0 0;
+  height: 0.42rem;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.range-tick {
+  position: absolute;
+  left: calc(var(--tick-position, 0) * 1%);
+  top: 0;
+  width: 2px;
+  height: 0.42rem;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 1);
+  box-shadow:
+    0 0 0 1px rgba(27, 42, 50, 0.44),
+    0 1px 2px rgba(27, 42, 50, 0.24);
 }
 
 .control-inputs input[type="number"] {
@@ -1152,6 +1223,7 @@ input[type="number"] {
   margin: 0;
   display: grid;
   justify-items: center;
+  padding-top: 0.38rem;
 }
 
 .scene-pane figcaption {
@@ -1171,6 +1243,11 @@ input[type="number"] {
   margin-top: 0;
   border-radius: 20px;
   overflow: hidden;
+}
+
+#scenePreview,
+#scenePreviewReference {
+  touch-action: none;
 }
 
 .scene-preview .scene-frame {
@@ -1199,6 +1276,28 @@ input[type="number"] {
     filter 120ms ease,
     opacity 120ms ease,
     transform 120ms ease;
+}
+
+.scene-preview [data-scene-distance-drag] {
+  cursor: grab;
+}
+
+.scene-preview [data-scene-distance-drag].is-dragging {
+  cursor: grabbing;
+}
+
+.scene-preview .scene-interaction-zone {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 1.5;
+  transition:
+    fill 140ms ease,
+    stroke 140ms ease;
+}
+
+.scene-preview .scene-interaction-zone.is-active {
+  fill: var(--scene-zone-highlight);
+  stroke: var(--scene-zone-stroke);
 }
 
 .scene-preview .scene-mountain-back {
@@ -1285,6 +1384,14 @@ input[type="number"] {
   fill: rgba(var(--panel-rgb), 0.84);
   stroke: rgba(var(--surface-rgb), 0.32);
   stroke-width: 2;
+  transition:
+    fill 140ms ease,
+    stroke 140ms ease,
+    stroke-width 140ms ease;
+}
+
+.scene-preview .scene-distance-chip {
+  pointer-events: none;
 }
 
 .scene-preview .scene-distance-text {
@@ -1293,6 +1400,17 @@ input[type="number"] {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.02em;
+  transition: fill 140ms ease;
+}
+
+.scene-preview .scene-distance-chip.is-active rect {
+  fill: rgba(var(--panel-rgb), 0.95);
+  stroke: var(--teal);
+  stroke-width: 2.6;
+}
+
+.scene-preview .scene-distance-chip.is-active .scene-distance-text {
+  fill: var(--teal);
 }
 
 .zoom-scale {
