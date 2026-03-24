@@ -277,12 +277,13 @@
                     <input
                       id="fNumberNumber"
                       type="number"
-                      min="1.2"
-                      max="32"
+                      min="1.4"
+                      max="22"
                       step="0.1"
                       value="2.0"
                     />
                   </div>
+                  <p class="control-meta" id="fNumberLightLoss">exposure multiplier: 2.0x vs f/2.8</p>
                 </div>
               </div>
             </div>
@@ -662,12 +663,12 @@
               <path id="zoomRayBottom" class="ray ray-bottom" d=""></path>
 
               <path id="zoomBarrelOuter" class="lens-barrel" d=""></path>
-              <rect id="zoomBarrelInner" class="lens-barrel-inner" x="182" y="88" width="258" height="104" rx="16"></rect>
+              <rect id="zoomBarrelInner" class="lens-barrel-inner" x="178" y="88" width="326" height="104" rx="16"></rect>
 
               <ellipse
                 id="zoomFrontGroup"
                 class="lens-group lens-group-front"
-                cx="240"
+                cx="202"
                 cy="140"
                 rx="18"
                 ry="58"
@@ -683,9 +684,9 @@
               <ellipse
                 id="zoomRearGroup"
                 class="lens-group lens-group-rear"
-                cx="398"
+                cx="404"
                 cy="140"
-                rx="14"
+                rx="16"
                 ry="48"
               ></ellipse>
               <circle id="zoomIris" class="zoom-iris" cx="360" cy="140" r="8"></circle>
@@ -711,7 +712,7 @@
 
             <div class="zoom-scale">
               <span>Wide</span>
-              <div class="zoom-scale-track">
+              <div class="zoom-scale-track" id="zoomScaleTrack">
                 <div class="zoom-scale-fill" id="zoomScaleFill"></div>
                 <div class="zoom-scale-thumb" id="zoomScaleThumb"></div>
               </div>

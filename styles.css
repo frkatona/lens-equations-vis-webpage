@@ -770,6 +770,14 @@ body[data-verbose="false"] .status-line {
   display: none;
 }
 
+.control-meta {
+  margin: 0.5rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 input[type="range"] {
   width: 100%;
   accent-color: var(--amber);
@@ -1001,6 +1009,14 @@ input[type="number"] {
 
 #zoomLensDemo.is-interpolating * {
   transition: all 130ms ease;
+}
+
+.zoom-scale-track.is-live .zoom-scale-fill {
+  transition: none;
+}
+
+.zoom-scale-track.is-live .zoom-scale-thumb {
+  transition: none;
 }
 
 .zoom-scale-track.is-interpolating .zoom-scale-fill {
@@ -1306,6 +1322,8 @@ input[type="number"] {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, rgba(194, 106, 44, 0.88), rgba(27, 113, 118, 0.88));
+  transition: width 130ms ease;
+  will-change: width;
 }
 
 .zoom-scale-thumb {
@@ -1320,6 +1338,7 @@ input[type="number"] {
   border: 2px solid rgba(27, 42, 50, 0.18);
   box-shadow: 0 6px 14px rgba(27, 42, 50, 0.18);
   transition: left 130ms ease;
+  will-change: left;
 }
 
 .charts-grid {

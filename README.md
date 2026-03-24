@@ -74,3 +74,16 @@ $$
 - Model diffraction, aberrations, field curvature, distortion, and vignetting.
 - Derive CoC from sensor size, output size, viewing distance, and sharpness criterion instead of treating it as fixed.
 - Use measured lens data and real scene geometry for the preview instead of idealized sampled planes.
+
+## to-do
+
+- [ ] add checkboxes to the optical blur card to incorporate simulation of different effects.  One will obviously be depth of field, then add 'brightness', 'crop', 
+
+- [x] make the light visibly enter through the aperture
+
+- [ ] guiding exercises
+  - "start with close-up and see how narrow the window of subject distances is where the CoC is focused
+
+- [ ] where should the aperture be?
+
+- [ ] how many actual glass lenses are there usually?  does it change with different types of lenses?
