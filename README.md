@@ -87,6 +87,13 @@ $$
 
 #### half-baked
 
+- [ ] expand/improve simulated image
+  - implement more realistic outcomes
+    - exposure/brightness
+      - ISO (also introduces grain)
+      - shutter speed
+    - motion blur 
+
 - [ ] add checkboxes to the optical blur card to incorporate simulation of different effects.  One will obviously be depth of field, then add 'brightness', 'crop', 
 
 - [ ] consider tutorial exercises which guide to user to the most salient influences 

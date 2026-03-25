@@ -1671,6 +1671,10 @@ body[data-verbose="true"] .bar-label {
   touch-action: none;
 }
 
+#scenePreview {
+  transition: filter 160ms ease;
+}
+
 .scene-preview .scene-frame {
   fill: rgba(var(--surface-rgb), 0.08);
   stroke: rgba(27, 42, 50, 0.08);
@@ -1861,6 +1865,13 @@ body[data-verbose="true"] .bar-label {
 
 .scene-preview .scene-distance-chip.is-active .scene-distance-text {
   fill: var(--scene-distance-color);
+}
+
+.scene-preview .scene-grain-overlay {
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  transition: opacity 160ms ease;
 }
 
 .zoom-scale {

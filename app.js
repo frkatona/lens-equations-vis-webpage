@@ -7,6 +7,10 @@ const SHUTTER_SPEED_MIN_SECONDS = 1 / 4000;
 const SHUTTER_SPEED_MAX_SECONDS = 30;
 const ISO_MIN = 50;
 const ISO_MAX = 12800;
+const SCENE_IMAGE_BRIGHTNESS_REFERENCE_F_NUMBER = EXPOSURE_REFERENCE_F_NUMBER;
+const SCENE_IMAGE_BRIGHTNESS_REFERENCE_SHUTTER_SECONDS = 1 / 125;
+const SCENE_IMAGE_BRIGHTNESS_REFERENCE_ISO = 100;
+const SCENE_IMAGE_GRAIN_START_ISO = 800;
 const SENSOR_FORMATS = Object.freeze([
   { key: "one_over_2_3", name: '1/2.3"', widthMm: 6.17, heightMm: 4.55 },
   { key: "one_inch", name: '1"', widthMm: 13.2, heightMm: 8.8 },
@@ -207,6 +211,7 @@ const elements = {
   zoomScaleThumb: document.getElementById("zoomScaleThumb"),
   scenePreviewReference: document.getElementById("scenePreviewReference"),
   scenePreview: document.getElementById("scenePreview"),
+  sceneImageGrainOverlay: document.getElementById("sceneImageGrainOverlay"),
   sceneReferenceForegroundZone: document.getElementById("sceneReferenceForegroundZone"),
   sceneReferenceSubjectZone: document.getElementById("sceneReferenceSubjectZone"),
   sceneReferenceBackgroundZone: document.getElementById("sceneReferenceBackgroundZone"),
@@ -1102,6 +1107,29 @@ function previewBlurPixels(blurMm, cocMm) {
   return clamp(Math.pow(ratio, 0.64) * 1.85, 0, 24);
 }
 
+function sceneImageBrightness(fNumber, shutterSpeedSeconds, iso) {
+  const apertureGain = relativeLightTransmission(fNumber, SCENE_IMAGE_BRIGHTNESS_REFERENCE_F_NUMBER);
+  const exposureGain = Math.max(
+    apertureGain
+      * (shutterSpeedSeconds / SCENE_IMAGE_BRIGHTNESS_REFERENCE_SHUTTER_SECONDS)
+      * (iso / SCENE_IMAGE_BRIGHTNESS_REFERENCE_ISO),
+    0.0001,
+  );
+  const exposureStops = Math.log2(exposureGain);
+  return clamp(1 + exposureStops * 0.11, 0.58, 1.85);
+}
+
+function sceneImageGrainAmount(iso) {
+  if (iso <= SCENE_IMAGE_GRAIN_START_ISO) {
+    return 0;
+  }
+  return clamp(
+    Math.log2(iso / SCENE_IMAGE_GRAIN_START_ISO) / Math.log2(ISO_MAX / SCENE_IMAGE_GRAIN_START_ISO),
+    0,
+    1,
+  );
+}
+
 function setSceneLayerDepth(element, blurPx, baseScale = 1) {
   const opacity = 1 - clamp(blurPx / 64, 0, 0.22);
   const scale = baseScale + blurPx * 0.0025;
@@ -1371,10 +1399,16 @@ function updateScenePreview(metrics) {
   const foregroundBlurMm = blurDiameterMm(metrics.focalLengthMm, metrics.fNumber, metrics.focusDistanceMm, scene.foregroundDistance * 1000);
   const subjectBlurMm = blurDiameterMm(metrics.focalLengthMm, metrics.fNumber, metrics.focusDistanceMm, scene.subjectDistance * 1000);
   const backgroundBlurMm = blurDiameterMm(metrics.focalLengthMm, metrics.fNumber, metrics.focusDistanceMm, scene.backgroundDistance * 1000);
+  const imageBrightness = sceneImageBrightness(metrics.fNumber, metrics.shutterSpeedSeconds, metrics.iso);
+  const imageGrainAmount = sceneImageGrainAmount(metrics.iso);
 
   setSceneLayerDepth(elements.sceneBackgroundLayer, previewBlurPixels(backgroundBlurMm, metrics.cocMm), 1);
   setSceneLayerDepth(elements.sceneSubjectLayer, previewBlurPixels(subjectBlurMm, metrics.cocMm), 1);
   setSceneLayerDepth(elements.sceneForegroundLayer, previewBlurPixels(foregroundBlurMm, metrics.cocMm), 1.02);
+  elements.scenePreview.style.filter = `brightness(${imageBrightness.toFixed(3)})`;
+  if (elements.sceneImageGrainOverlay) {
+    elements.sceneImageGrainOverlay.style.opacity = (imageGrainAmount * 0.38).toFixed(3);
+  }
   setSceneDistanceChipColor(elements.sceneForegroundChip, scene.foregroundDistance, palette);
   setSceneDistanceChipColor(elements.sceneSubjectChip, scene.subjectDistance, palette);
   setSceneDistanceChipColor(elements.sceneBackgroundChip, scene.backgroundDistance, palette);
@@ -1494,7 +1528,7 @@ function updateHelpText(metrics, sceneMetrics) {
   setHelp(helpTargets.hyperfocalBar, helpText("Hyperfocal distance H.", "This is the focus distance that pushes the far DOF limit to Infinity.", hyperfocalEquation));
 
   setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, `Sensor format is ${metrics.sensorFormatName} (${formatSensorSizeCentimeters(sensorFormatByKey(metrics.sensorFormatKey))}).`, `The moving sensor plane and dimension line show s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, "The outer amber rays bend at each lens group, pass through the iris poles, and only their post-iris segments dim as N closes down.", "The field cone lands on the current probe-blur disc, while the teal span still shows projected image height at the sensor plane.", `The amber ring marks the CoC threshold c = ${formatMillimeters(metrics.cocMm)} and the filled disc shows the current probe blur.`, "Both circles now use the same sensor-relative linear scale, and they cap at the illustrated sensor height when the full allowed blur range would exceed it.", "Approximate field slice: 2 * atan(sensor_half / f)."));
-  setHelp([helpTargets.sceneCard, elements.scenePreview], helpText("Scene blur comparison.", "Left panel stays sharp as a before view; right panel applies the live optical blur.", `Foreground plane is around ${formatDistanceMeters(sceneMetrics.foregroundDistance)} with blur ${formatMillimeters(sceneMetrics.foregroundBlurMm)}.`, `Subject plane follows z = ${formatDistanceMeters(sceneMetrics.subjectDistance)} with blur ${formatMillimeters(sceneMetrics.subjectBlurMm)}.`, `Background plane is around ${formatDistanceMeters(sceneMetrics.backgroundDistance)} with blur ${formatMillimeters(sceneMetrics.backgroundBlurMm)}.`, "The before view uses left, center, and right thirds for foreground, subject, and background selection; drag up or down within a third to change its distance.", "Each layer uses the current thin-lens blur from the live f, N, s, z, and CoC settings."));
+  setHelp([helpTargets.sceneCard, elements.scenePreview], helpText("Scene and image comparison.", "Left panel shows the scene view; right panel shows the resulting image.", `Foreground plane is around ${formatDistanceMeters(sceneMetrics.foregroundDistance)} with blur ${formatMillimeters(sceneMetrics.foregroundBlurMm)}.`, `Subject plane follows z = ${formatDistanceMeters(sceneMetrics.subjectDistance)} with blur ${formatMillimeters(sceneMetrics.subjectBlurMm)}.`, `Background plane is around ${formatDistanceMeters(sceneMetrics.backgroundDistance)} with blur ${formatMillimeters(sceneMetrics.backgroundBlurMm)}.`, `Aperture, shutter speed, and ISO all brighten or darken the image panel, with visible grain beginning above ISO ${formatIso(SCENE_IMAGE_GRAIN_START_ISO)}.`, "The scene view uses left, center, and right thirds for foreground, subject, and background selection; drag up or down within a third to change its distance.", "Each layer uses the current thin-lens blur from the live f, N, s, z, and CoC settings."));
   setHelp([helpTargets.imageChartCard, elements.imageChart], helpText("Image distance chart.", "Y-axis equation: s' = f s / (s - f).", "The focus marker shows the currently selected subject distance s."));
   setHelp([helpTargets.magnificationChartCard, elements.magnificationChart], helpText("Magnification chart.", "Y-axis equation: |m| = |-s' / s|.", "The bar values keep the sign, but the plot shows magnitude only."));
   setHelp([helpTargets.blurChartCard, elements.blurChart], helpText("Blur and depth-of-field chart.", "Blur equation: c(z) = D |s'_focus - z'| / z', with z' = f z / (z - f).", "The shaded region is where c(z) <= CoC.", `Current CoC threshold: ${formatMillimeters(metrics.cocMm)}.`));
