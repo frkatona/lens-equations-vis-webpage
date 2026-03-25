@@ -82,6 +82,12 @@
             <input id="interpolateToggle" type="checkbox" />
           </label>
         </div>
+        <div class="drawer-group">
+          <label class="drawer-toggle" for="showOrangeLinesToggle">
+            <span class="drawer-label">Show orange lines</span>
+            <input id="showOrangeLinesToggle" type="checkbox" />
+          </label>
+        </div>
 
         <div class="drawer-group">
           <div class="drawer-row">
@@ -153,18 +159,18 @@
 
         <div class="drawer-group">
           <div class="drawer-row">
-            <label class="drawer-label" for="fieldConeVibranceRange">
-              Field cone vibrance
+            <label class="drawer-label" id="cocLabel" for="cocRange">
+              CoC
             </label>
-            <output id="fieldConeVibranceDisplay">100%</output>
+            <output id="cocDisplay">0.030 mm</output>
           </div>
           <input
-            id="fieldConeVibranceRange"
+            id="cocRange"
             type="range"
-            min="40"
-            max="320"
-            step="5"
-            value="100"
+            min="0"
+            max="1000"
+            step="1"
+            value="0"
           />
         </div>
 
@@ -265,176 +271,54 @@
             Thin-lens sketch. Distances are measured from the lens plane.
           </p>
 
-          <div class="controls-grid">
-            <div class="controls-group">
-              <span class="controls-group-label">lens</span>
-              <div class="controls-group-inner">
-                <div class="control">
-                  <div class="control-top">
-                    <label id="focalLengthLabel" for="focalLengthRange">f</label>
-                    <output id="focalLengthDisplay">85 mm</output>
-                  </div>
-                  <div class="control-inputs">
-                    <div class="range-input-shell range-input-shell-ticked">
-                      <input
-                        id="focalLengthRange"
-                        type="range"
-                        min="0"
-                        max="1000"
-                        step="1"
-                        value="0"
-                      />
-                      <div class="range-ticks" id="focalLengthTicks" aria-hidden="true"></div>
-                    </div>
-                    <input
-                      id="focalLengthNumber"
-                      type="number"
-                      min="6"
-                      max="400"
-                      step="1"
-                      value="85"
-                    />
-                  </div>
-                </div>
-
-                <div class="control">
-                  <div class="control-top">
-                    <label id="fNumberLabel" for="fNumberRange">N</label>
-                    <output id="fNumberDisplay">f/2.0</output>
-                  </div>
-                  <div class="control-inputs">
-                    <div class="range-input-shell range-input-shell-ticked">
-                      <input
-                        id="fNumberRange"
-                        type="range"
-                        min="0"
-                        max="1000"
-                        step="1"
-                        value="0"
-                      />
-                      <div class="range-ticks" id="fNumberTicks" aria-hidden="true"></div>
-                    </div>
-                    <input
-                      id="fNumberNumber"
-                      type="number"
-                      min="1.4"
-                      max="22"
-                      step="0.1"
-                      value="2.0"
-                    />
-                  </div>
-                  <p class="control-meta" id="fNumberLightLoss">exposure multiplier: 2.0x vs f/2.8</p>
-                </div>
+          <div class="controls-hidden-bank" aria-hidden="true">
+            <div class="control is-hidden">
+              <div class="control-top">
+                <label id="focusDistanceLabel" for="focusDistanceRange">s</label>
+                <output id="focusDistanceDisplay">2.00 m</output>
+              </div>
+              <div class="control-inputs">
+                <input
+                  id="focusDistanceRange"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  step="1"
+                  value="0"
+                />
+                <input
+                  id="focusDistanceNumber"
+                  type="number"
+                  min="0.10"
+                  max="100"
+                  step="0.01"
+                  value="2.00"
+                />
               </div>
             </div>
 
-            <div class="controls-group">
-              <span class="controls-group-label">focus</span>
-              <div class="controls-group-inner">
-                <div class="control is-hidden">
-                  <div class="control-top">
-                    <label id="focusDistanceLabel" for="focusDistanceRange">s</label>
-                    <output id="focusDistanceDisplay">2.00 m</output>
-                  </div>
-                  <div class="control-inputs">
-                    <input
-                      id="focusDistanceRange"
-                      type="range"
-                      min="0"
-                      max="1000"
-                      step="1"
-                      value="0"
-                    />
-                    <input
-                      id="focusDistanceNumber"
-                      type="number"
-                      min="0.10"
-                      max="100"
-                      step="0.01"
-                      value="2.00"
-                    />
-                  </div>
-                </div>
-
-                <div class="control">
-                  <div class="control-top">
-                    <label id="sensorDistanceLabel" for="sensorDistanceRange">s'</label>
-                    <output id="sensorDistanceDisplay">88.8 mm</output>
-                  </div>
-                  <div class="control-inputs">
-                    <input
-                      id="sensorDistanceRange"
-                      type="range"
-                      min="0"
-                      max="1000"
-                      step="1"
-                      value="0"
-                    />
-                    <input
-                      id="sensorDistanceNumber"
-                      type="number"
-                      min="6.00"
-                      max="10000"
-                      step="0.01"
-                      value="88.82"
-                    />
-                  </div>
-                </div>
+            <div class="control is-hidden">
+              <div class="control-top">
+                <label id="probeDistanceLabel" for="probeDistanceRange">z</label>
+                <output id="probeDistanceDisplay">3.00 m</output>
               </div>
-            </div>
-
-            <div class="controls-group">
-              <span class="controls-group-label">analysis</span>
-              <div class="controls-group-inner">
-                <div class="control">
-                  <div class="control-top">
-                    <label id="cocLabel" for="cocRange">CoC</label>
-                    <output id="cocDisplay">0.030 mm</output>
-                  </div>
-                  <div class="control-inputs">
-                    <input
-                      id="cocRange"
-                      type="range"
-                      min="0"
-                      max="1000"
-                      step="1"
-                      value="0"
-                    />
-                    <input
-                      id="cocNumber"
-                      type="number"
-                      min="0.003"
-                      max="0.050"
-                      step="0.001"
-                      value="0.030"
-                    />
-                  </div>
-                </div>
-
-                <div class="control is-hidden">
-                  <div class="control-top">
-                    <label id="probeDistanceLabel" for="probeDistanceRange">z</label>
-                    <output id="probeDistanceDisplay">3.00 m</output>
-                  </div>
-                  <div class="control-inputs">
-                    <input
-                      id="probeDistanceRange"
-                      type="range"
-                      min="0"
-                      max="1000"
-                      step="1"
-                      value="0"
-                    />
-                    <input
-                      id="probeDistanceNumber"
-                      type="number"
-                      min="0.10"
-                      max="100"
-                      step="0.01"
-                      value="3.00"
-                    />
-                  </div>
-                </div>
+              <div class="control-inputs">
+                <input
+                  id="probeDistanceRange"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  step="1"
+                  value="0"
+                />
+                <input
+                  id="probeDistanceNumber"
+                  type="number"
+                  min="0.10"
+                  max="100"
+                  step="0.01"
+                  value="3.00"
+                />
               </div>
             </div>
           </div>
@@ -554,6 +438,39 @@
                     ></rect>
                   </g>
 
+                  <g id="sceneReferenceForegroundArrows" class="scene-zone-arrows">
+                    <g transform="translate(20 26)">
+                      <path class="scene-zone-arrow-line" d="M0 16 V5"></path>
+                      <path class="scene-zone-arrow-head" d="M-4 9 L0 5 L4 9"></path>
+                    </g>
+                    <g transform="translate(20 214)">
+                      <path class="scene-zone-arrow-line" d="M0 0 V11"></path>
+                      <path class="scene-zone-arrow-head" d="M-4 7 L0 11 L4 7"></path>
+                    </g>
+                  </g>
+
+                  <g id="sceneReferenceSubjectArrows" class="scene-zone-arrows">
+                    <g transform="translate(273 26)">
+                      <path class="scene-zone-arrow-line" d="M0 16 V5"></path>
+                      <path class="scene-zone-arrow-head" d="M-4 9 L0 5 L4 9"></path>
+                    </g>
+                    <g transform="translate(273 214)">
+                      <path class="scene-zone-arrow-line" d="M0 0 V11"></path>
+                      <path class="scene-zone-arrow-head" d="M-4 7 L0 11 L4 7"></path>
+                    </g>
+                  </g>
+
+                  <g id="sceneReferenceBackgroundArrows" class="scene-zone-arrows">
+                    <g transform="translate(526 26)">
+                      <path class="scene-zone-arrow-line" d="M0 16 V5"></path>
+                      <path class="scene-zone-arrow-head" d="M-4 9 L0 5 L4 9"></path>
+                    </g>
+                    <g transform="translate(526 214)">
+                      <path class="scene-zone-arrow-line" d="M0 0 V11"></path>
+                      <path class="scene-zone-arrow-head" d="M-4 7 L0 11 L4 7"></path>
+                    </g>
+                  </g>
+
                   <g id="sceneForegroundChip" class="scene-distance-chip" transform="translate(14 242)">
                     <rect width="226" height="32" rx="16"></rect>
                     <text id="sceneForegroundDistanceText" class="scene-distance-text" x="14" y="21">
@@ -671,91 +588,183 @@
           </article>
 
           <article class="panel zoom-demo-card">
-            <div class="zoom-meta">
-              <span class="zoom-pill" id="zoomStateLabel">Portrait reach</span>
-              <span class="zoom-pill muted" id="zoomFocalValue">85 mm effective</span>
-            </div>
+            <div class="zoom-demo-layout">
+              <div class="zoom-controls-column">
+                <div class="zoom-control-stack">
+                  <div class="control">
+                    <div class="control-top">
+                      <label id="focalLengthLabel" for="focalLengthRange">f</label>
+                      <output id="focalLengthDisplay">85 mm</output>
+                    </div>
+                    <div class="control-inputs">
+                      <div class="range-input-shell range-input-shell-ticked">
+                        <input
+                          id="focalLengthRange"
+                          type="range"
+                          min="0"
+                          max="1000"
+                          step="1"
+                          value="0"
+                        />
+                        <div class="range-ticks" id="focalLengthTicks" aria-hidden="true"></div>
+                      </div>
+                      <input
+                        id="focalLengthNumber"
+                        type="number"
+                        min="6"
+                        max="400"
+                        step="1"
+                        value="85"
+                      />
+                    </div>
+                  </div>
 
-            <svg
-              id="zoomLensDemo"
-              viewBox="0 0 620 280"
-              aria-label="Simplified variable lens diagram"
-            >
-              <defs>
-                <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stop-color="rgba(255,255,255,0.95)" />
-                  <stop offset="100%" stop-color="rgba(27,113,118,0.28)" />
-                </linearGradient>
-                <linearGradient id="fieldGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop id="fieldGradientStart" offset="0%" stop-color="rgba(194,106,44,0.06)" />
-                  <stop id="fieldGradientEnd" offset="100%" stop-color="rgba(27,113,118,0.20)" />
-                </linearGradient>
-              </defs>
+                  <div class="control">
+                    <div class="control-top">
+                      <label id="fNumberLabel" for="fNumberRange">N</label>
+                      <output id="fNumberDisplay">f/2.0</output>
+                    </div>
+                    <div class="control-inputs">
+                      <div class="range-input-shell range-input-shell-ticked">
+                        <input
+                          id="fNumberRange"
+                          type="range"
+                          min="0"
+                          max="1000"
+                          step="1"
+                          value="0"
+                        />
+                        <div class="range-ticks" id="fNumberTicks" aria-hidden="true"></div>
+                      </div>
+                      <input
+                        id="fNumberNumber"
+                        type="number"
+                        min="1.4"
+                        max="22"
+                        step="0.1"
+                        value="2.0"
+                      />
+                    </div>
+                    <p class="control-meta" id="fNumberLightLoss">exposure multiplier: 2.0x vs f/2.8</p>
+                  </div>
 
-              <rect class="demo-stage" x="20" y="26" width="580" height="228" rx="28"></rect>
-              <line class="demo-axis" x1="48" y1="140" x2="574" y2="140"></line>
-
-              <path id="zoomFieldCone" class="field-cone" d=""></path>
-              <path id="zoomRayTopFront" class="ray ray-top" d=""></path>
-              <path id="zoomRayTopRear" class="ray ray-top" d=""></path>
-              <path id="zoomRayMid" class="ray ray-mid" d=""></path>
-              <path id="zoomRayBottomFront" class="ray ray-bottom" d=""></path>
-              <path id="zoomRayBottomRear" class="ray ray-bottom" d=""></path>
-
-              <path id="zoomBarrelOuter" class="lens-barrel" d=""></path>
-              <rect id="zoomBarrelInner" class="lens-barrel-inner" x="178" y="88" width="326" height="104" rx="16"></rect>
-
-              <ellipse
-                id="zoomFrontGroup"
-                class="lens-group lens-group-front"
-                cx="202"
-                cy="140"
-                rx="18"
-                ry="58"
-              ></ellipse>
-              <ellipse
-                id="zoomMiddleGroup"
-                class="lens-group lens-group-middle"
-                cx="324"
-                cy="140"
-                rx="16"
-                ry="54"
-              ></ellipse>
-              <ellipse
-                id="zoomRearGroup"
-                class="lens-group lens-group-rear"
-                cx="404"
-                cy="140"
-                rx="16"
-                ry="48"
-              ></ellipse>
-              <circle id="zoomIris" class="zoom-iris" cx="360" cy="140" r="8"></circle>
-
-              <line id="zoomLensPlane" class="lens-plane" x1="426" y1="82" x2="426" y2="210"></line>
-              <line id="zoomProjectionSlice" class="projection-slice" x1="514" y1="92" x2="514" y2="188"></line>
-              <line id="zoomSensorPlane" class="sensor-plane" x1="514" y1="72" x2="514" y2="208"></line>
-              
-              <circle id="zoomProbeBlurDisc" class="probe-blur-disc" cx="514" cy="140" r="14"></circle>
-              <circle id="zoomCocRing" class="coc-ring" cx="514" cy="140" r="7"></circle>
-              
-              <line id="zoomSensorDistanceGuideStart" class="dimension-guide" x1="426" y1="190" x2="426" y2="232"></line>
-              <line id="zoomSensorDistanceGuideEnd" class="dimension-guide" x1="514" y1="190" x2="514" y2="232"></line>
-              <line id="zoomSensorDistanceLine" class="dimension-line" x1="426" y1="224" x2="514" y2="224"></line>
-              <line id="zoomSensorDistanceStartTick" class="dimension-tick" x1="426" y1="218" x2="426" y2="230"></line>
-              <line id="zoomSensorDistanceEndTick" class="dimension-tick" x1="514" y1="218" x2="514" y2="230"></line>
-
-              <text class="demo-label" id="zoomSensorLabel" x="520" y="88">sensor</text>
-              <text class="demo-label" id="zoomFieldText" x="42" y="248">wide field</text>
-              <text class="demo-label" id="zoomSensorDistanceText" x="470" y="250" text-anchor="middle">s' = 88.8 mm</text>
-            </svg>
-
-            <div class="zoom-scale">
-              <span>Wide</span>
-              <div class="zoom-scale-track" id="zoomScaleTrack">
-                <div class="zoom-scale-fill" id="zoomScaleFill"></div>
-                <div class="zoom-scale-thumb" id="zoomScaleThumb"></div>
+                  <div class="control">
+                    <div class="control-top">
+                      <label id="sensorDistanceLabel" for="sensorDistanceRange">s'</label>
+                      <output id="sensorDistanceDisplay">88.8 mm</output>
+                    </div>
+                    <div class="control-inputs">
+                      <input
+                        id="sensorDistanceRange"
+                        type="range"
+                        min="0"
+                        max="1000"
+                        step="1"
+                        value="0"
+                      />
+                      <input
+                        id="sensorDistanceNumber"
+                        type="number"
+                        min="6.00"
+                        max="10000"
+                        step="0.01"
+                        value="88.82"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <span>Tele</span>
+
+              <div class="zoom-diagram-column">
+                <div class="zoom-meta">
+                  <span class="zoom-pill" id="zoomStateLabel">Portrait reach</span>
+                  <span class="zoom-pill muted" id="zoomFocalValue">85 mm effective</span>
+                </div>
+
+                <svg
+                  id="zoomLensDemo"
+                  viewBox="0 0 620 280"
+                  aria-label="Simplified variable lens diagram"
+                >
+                  <defs>
+                    <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="rgba(255,255,255,0.95)" />
+                      <stop offset="100%" stop-color="rgba(27,113,118,0.28)" />
+                    </linearGradient>
+                    <linearGradient id="fieldGradient" x1="78" y1="140" x2="546" y2="140" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stop-color="hsla(28, 100%, 67%, 0.159)" />
+                      <stop offset="100%" stop-color="hsla(184, 100%, 50%, 0.508)" />
+                    </linearGradient>
+                  </defs>
+
+                  <rect class="demo-stage" x="20" y="26" width="580" height="228" rx="28"></rect>
+                  <line class="demo-axis" x1="48" y1="140" x2="574" y2="140"></line>
+
+                  <path id="zoomFieldConeFront" class="field-cone field-cone-front" d=""></path>
+                  <path id="zoomFieldConeRear" class="field-cone field-cone-rear" d=""></path>
+                  <path id="zoomRayTopFront" class="ray ray-top" d=""></path>
+                  <path id="zoomRayTopRear" class="ray ray-top" d=""></path>
+                  <path id="zoomRayMid" class="ray ray-mid" d=""></path>
+                  <path id="zoomRayBottomFront" class="ray ray-bottom" d=""></path>
+                  <path id="zoomRayBottomRear" class="ray ray-bottom" d=""></path>
+
+                  <path id="zoomBarrelOuter" class="lens-barrel" d=""></path>
+                  <rect id="zoomBarrelInner" class="lens-barrel-inner" x="178" y="88" width="326" height="104" rx="16"></rect>
+
+                  <ellipse
+                    id="zoomFrontGroup"
+                    class="lens-group lens-group-front"
+                    cx="202"
+                    cy="140"
+                    rx="18"
+                    ry="58"
+                  ></ellipse>
+                  <ellipse
+                    id="zoomMiddleGroup"
+                    class="lens-group lens-group-middle"
+                    cx="324"
+                    cy="140"
+                    rx="16"
+                    ry="54"
+                  ></ellipse>
+                  <ellipse
+                    id="zoomRearGroup"
+                    class="lens-group lens-group-rear"
+                    cx="404"
+                    cy="140"
+                    rx="16"
+                    ry="48"
+                  ></ellipse>
+                  <circle id="zoomIris" class="zoom-iris" cx="360" cy="140" r="8"></circle>
+
+                  <line id="zoomLensPlane" class="lens-plane" x1="426" y1="82" x2="426" y2="210"></line>
+                  <line id="zoomProjectionSlice" class="projection-slice" x1="514" y1="92" x2="514" y2="188"></line>
+                  <line id="zoomSensorOutline" class="sensor-outline" x1="514" y1="88" x2="514" y2="192"></line>
+                  <line id="zoomSensorPlane" class="sensor-plane" x1="514" y1="88" x2="514" y2="192"></line>
+                  
+                  <circle id="zoomProbeBlurDisc" class="probe-blur-disc" cx="514" cy="140" r="14"></circle>
+                  <circle id="zoomCocRing" class="coc-ring" cx="514" cy="140" r="7"></circle>
+                  
+                  <line id="zoomSensorDistanceGuideStart" class="dimension-guide" x1="426" y1="190" x2="426" y2="232"></line>
+                  <line id="zoomSensorDistanceGuideEnd" class="dimension-guide" x1="514" y1="190" x2="514" y2="232"></line>
+                  <line id="zoomSensorDistanceLine" class="dimension-line" x1="426" y1="224" x2="514" y2="224"></line>
+                  <line id="zoomSensorDistanceStartTick" class="dimension-tick" x1="426" y1="218" x2="426" y2="230"></line>
+                  <line id="zoomSensorDistanceEndTick" class="dimension-tick" x1="514" y1="218" x2="514" y2="230"></line>
+
+                  <text class="demo-label" id="zoomSensorLabel" x="520" y="88">sensor</text>
+                  <text class="demo-label" id="zoomFieldText" x="42" y="248">wide field</text>
+                  <text class="demo-label" id="zoomSensorDistanceText" x="470" y="250" text-anchor="middle">s' = 88.8 mm</text>
+                </svg>
+
+                <div class="zoom-scale">
+                  <span>Wide</span>
+                  <div class="zoom-scale-track" id="zoomScaleTrack">
+                    <div class="zoom-scale-fill" id="zoomScaleFill"></div>
+                    <div class="zoom-scale-thumb" id="zoomScaleThumb"></div>
+                  </div>
+                  <span>Tele</span>
+                </div>
+              </div>
             </div>
           </article>
         </section>

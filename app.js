@@ -31,11 +31,11 @@ const DISPLAY_THEMES = ["sand", "slate", "forest", "midnight", "ember", "aurora"
 const DISPLAY_DEFAULTS = Object.freeze({
   theme: "midnight",
   verbose: false,
+  showOrangeLines: false,
   transparency: 20,
   width: 1320,
   blur: 18,
   halfAngleVibrance: 100,
-  fieldConeVibrance: 100,
   radius: 26,
   foregroundDistance: 1.74,
   backgroundDistance: 6.6,
@@ -59,6 +59,7 @@ const elements = {
   displayScrim: document.getElementById("displayScrim"),
   displayDrawer: document.getElementById("displayDrawer"),
   verboseToggle: document.getElementById("verboseToggle"),
+  showOrangeLinesToggle: document.getElementById("showOrangeLinesToggle"),
   transparencyRange: document.getElementById("transparencyRange"),
   transparencyDisplay: document.getElementById("transparencyDisplay"),
   contentWidthRange: document.getElementById("contentWidthRange"),
@@ -67,8 +68,6 @@ const elements = {
   blurStrengthDisplay: document.getElementById("blurStrengthDisplay"),
   halfAngleVibranceRange: document.getElementById("halfAngleVibranceRange"),
   halfAngleVibranceDisplay: document.getElementById("halfAngleVibranceDisplay"),
-  fieldConeVibranceRange: document.getElementById("fieldConeVibranceRange"),
-  fieldConeVibranceDisplay: document.getElementById("fieldConeVibranceDisplay"),
   radiusRange: document.getElementById("radiusRange"),
   radiusDisplay: document.getElementById("radiusDisplay"),
   sceneForegroundRange: document.getElementById("sceneForegroundRange"),
@@ -136,6 +135,7 @@ const elements = {
   zoomRearGroup: document.getElementById("zoomRearGroup"),
   zoomIris: document.getElementById("zoomIris"),
   zoomLensPlane: document.getElementById("zoomLensPlane"),
+  zoomSensorOutline: document.getElementById("zoomSensorOutline"),
   zoomSensorPlane: document.getElementById("zoomSensorPlane"),
   zoomSensorDistanceGuideStart: document.getElementById("zoomSensorDistanceGuideStart"),
   zoomSensorDistanceGuideEnd: document.getElementById("zoomSensorDistanceGuideEnd"),
@@ -146,9 +146,8 @@ const elements = {
   zoomProjectionSlice: document.getElementById("zoomProjectionSlice"),
   zoomProbeBlurDisc: document.getElementById("zoomProbeBlurDisc"),
   zoomCocRing: document.getElementById("zoomCocRing"),
-  zoomFieldCone: document.getElementById("zoomFieldCone"),
-  zoomFieldGradientStart: document.getElementById("fieldGradientStart"),
-  zoomFieldGradientEnd: document.getElementById("fieldGradientEnd"),
+  zoomFieldConeFront: document.getElementById("zoomFieldConeFront"),
+  zoomFieldConeRear: document.getElementById("zoomFieldConeRear"),
   zoomRayTopFront: document.getElementById("zoomRayTopFront"),
   zoomRayTopRear: document.getElementById("zoomRayTopRear"),
   zoomRayMid: document.getElementById("zoomRayMid"),
@@ -163,6 +162,9 @@ const elements = {
   sceneReferenceForegroundZone: document.getElementById("sceneReferenceForegroundZone"),
   sceneReferenceSubjectZone: document.getElementById("sceneReferenceSubjectZone"),
   sceneReferenceBackgroundZone: document.getElementById("sceneReferenceBackgroundZone"),
+  sceneReferenceForegroundArrows: document.getElementById("sceneReferenceForegroundArrows"),
+  sceneReferenceSubjectArrows: document.getElementById("sceneReferenceSubjectArrows"),
+  sceneReferenceBackgroundArrows: document.getElementById("sceneReferenceBackgroundArrows"),
   sceneBackgroundLayer: document.getElementById("sceneBackgroundLayer"),
   sceneSubjectLayer: document.getElementById("sceneSubjectLayer"),
   sceneForegroundLayer: document.getElementById("sceneForegroundLayer"),
@@ -186,7 +188,7 @@ const helpTargets = {
   contentWidthGroup: elements.contentWidthRange.closest(".drawer-group"),
   blurGroup: elements.blurStrengthRange.closest(".drawer-group"),
   halfAngleVibranceGroup: elements.halfAngleVibranceRange.closest(".drawer-group"),
-  fieldConeVibranceGroup: elements.fieldConeVibranceRange.closest(".drawer-group"),
+  showOrangeLinesGroup: elements.showOrangeLinesToggle.closest(".drawer-group"),
   radiusGroup: elements.radiusRange.closest(".drawer-group"),
   sceneForegroundGroup: elements.sceneForegroundRange.closest(".drawer-group"),
   sceneBackgroundGroup: elements.sceneBackgroundRange.closest(".drawer-group"),
@@ -194,7 +196,7 @@ const helpTargets = {
   sensorDistanceControl: elements.sensorDistanceRange.closest(".control"),
   focusDistanceControl: elements.focusDistanceRange.closest(".control"),
   fNumberControl: elements.fNumberRange.closest(".control"),
-  cocControl: elements.cocRange.closest(".control"),
+  cocControl: elements.cocRange.closest(".drawer-group") || elements.cocRange.closest(".control"),
   probeDistanceControl: elements.probeDistanceRange.closest(".control"),
   summaryText: elements.summaryText,
   nearDofPill: elements.nearDofValue.closest(".quick-pill"),
@@ -997,14 +999,15 @@ function updateZoomDemo(metrics) {
   const sceneX = 78;
   const barrelInnerY = 88;
   const barrelInnerHeight = 104;
+  const barrelInnerBottomY = barrelInnerY + barrelInnerHeight;
   const frontRadiusX = 18;
   const frontRadiusY = 58;
   const middleRadiusX = 16;
   const middleRadiusY = 54;
   const rearRadiusX = 16;
   const rearRadiusY = 48;
-  const sensorPlaneTopY = 72;
-  const sensorPlaneBottomY = 208;
+  const sensorPlaneTopY = barrelInnerY;
+  const sensorPlaneBottomY = barrelInnerBottomY;
   const sensorPlaneHalfHeight = (sensorPlaneBottomY - sensorPlaneTopY) / 2;
   const frontX = 202;
   const middleX = 324 + zoom * 56;
@@ -1042,16 +1045,7 @@ function updateZoomDemo(metrics) {
   const probeDiscFillLightness = 28 + apertureTransmission * 26;
   const probeDiscStrokeLightness = 36 + apertureTransmission * 28;
   const halfAngleVibrance = displayState.halfAngleVibrance / 100;
-  const fieldConeVibrance = displayState.fieldConeVibrance / 100;
-  const fieldConeStartSaturation = clamp(28 + fieldConeVibrance * 36, 18, 100);
-  const fieldConeStartLightness = clamp(38 + fieldConeVibrance * 9, 30, 70);
-  const fieldConeStartAlpha = clamp(0.015 + fieldConeVibrance * 0.045, 0.015, 0.18);
-  const fieldConeEndSaturation = clamp(26 + fieldConeVibrance * 38, 18, 100);
-  const fieldConeEndLightness = clamp(18 + fieldConeVibrance * 10, 14, 56);
-  const fieldConeEndAlpha = clamp(0.06 + fieldConeVibrance * 0.14, 0.05, 0.52);
-  const fieldConeStrokeSaturation = clamp(18 + fieldConeVibrance * 30, 12, 86);
-  const fieldConeStrokeLightness = clamp(24 + fieldConeVibrance * 11, 20, 62);
-  const fieldConeStrokeAlpha = clamp(0.08 + fieldConeVibrance * 0.1, 0.08, 0.42);
+  const rearConeOpacity = 0.2 + 0.8 * Math.pow(apertureTransmission, 0.38);
   const halfAngleSaturation = clamp(56 + halfAngleVibrance * 16, 48, 100);
   const halfAngleLightness = clamp(58 + halfAngleVibrance * 6.5, 52, 84);
   const halfAngleAlpha = clamp(0.38 + halfAngleVibrance * 0.2, 0.38, 1);
@@ -1096,8 +1090,14 @@ function updateZoomDemo(metrics) {
   elements.zoomIris.setAttribute("r", irisRadius.toFixed(1));
   elements.zoomLensPlane.setAttribute("x1", lensPlaneX.toFixed(1));
   elements.zoomLensPlane.setAttribute("x2", lensPlaneX.toFixed(1));
+  elements.zoomSensorOutline.setAttribute("x1", sensorX.toFixed(1));
+  elements.zoomSensorOutline.setAttribute("x2", sensorX.toFixed(1));
+  elements.zoomSensorOutline.setAttribute("y1", sensorPlaneTopY.toFixed(1));
+  elements.zoomSensorOutline.setAttribute("y2", sensorPlaneBottomY.toFixed(1));
   elements.zoomSensorPlane.setAttribute("x1", sensorX.toFixed(1));
   elements.zoomSensorPlane.setAttribute("x2", sensorX.toFixed(1));
+  elements.zoomSensorPlane.setAttribute("y1", sensorPlaneTopY.toFixed(1));
+  elements.zoomSensorPlane.setAttribute("y2", sensorPlaneBottomY.toFixed(1));
   elements.zoomSensorLabel.setAttribute("x", (sensorX + 8).toFixed(1));
   elements.zoomSensorDistanceGuideStart.setAttribute("x1", lensPlaneX.toFixed(1));
   elements.zoomSensorDistanceGuideStart.setAttribute("x2", lensPlaneX.toFixed(1));
@@ -1124,16 +1124,13 @@ function updateZoomDemo(metrics) {
   elements.zoomCocRing.setAttribute("cx", sensorX.toFixed(1));
   elements.zoomCocRing.setAttribute("cy", centerY.toFixed(1));
   elements.zoomCocRing.setAttribute("r", cocRadius.toFixed(1));
-  elements.zoomFieldCone.style.opacity = "";
-  elements.zoomFieldGradientStart.setAttribute(
-    "stop-color",
-    `hsla(28, ${fieldConeStartSaturation.toFixed(0)}%, ${fieldConeStartLightness.toFixed(0)}%, ${fieldConeStartAlpha.toFixed(3)})`,
-  );
-  elements.zoomFieldGradientEnd.setAttribute(
-    "stop-color",
-    `hsla(184, ${fieldConeEndSaturation.toFixed(0)}%, ${fieldConeEndLightness.toFixed(0)}%, ${fieldConeEndAlpha.toFixed(3)})`,
-  );
-  elements.zoomFieldCone.style.stroke = `hsla(184, ${fieldConeStrokeSaturation.toFixed(0)}%, ${fieldConeStrokeLightness.toFixed(0)}%, ${fieldConeStrokeAlpha.toFixed(3)})`;
+  elements.zoomFieldConeFront.style.opacity = "1";
+  elements.zoomFieldConeRear.style.opacity = rearConeOpacity.toFixed(3);
+  const orangeRayVisibility = displayState.showOrangeLines ? "visible" : "hidden";
+  elements.zoomRayTopFront.style.visibility = orangeRayVisibility;
+  elements.zoomRayTopRear.style.visibility = orangeRayVisibility;
+  elements.zoomRayBottomFront.style.visibility = orangeRayVisibility;
+  elements.zoomRayBottomRear.style.visibility = orangeRayVisibility;
   elements.zoomRayTopFront.style.opacity = "1";
   elements.zoomRayTopRear.style.opacity = rearRayOpacity.toFixed(3);
   elements.zoomRayTopRear.style.stroke = `hsla(28, 72%, ${rearRayLightness.toFixed(0)}%, 0.96)`;
@@ -1144,18 +1141,23 @@ function updateZoomDemo(metrics) {
   elements.zoomRayBottomRear.style.opacity = rearRayOpacity.toFixed(3);
   elements.zoomRayBottomRear.style.stroke = `hsla(28, 72%, ${rearRayLightness.toFixed(0)}%, 0.96)`;
 
-  const cone = [
+  const frontCone = [
     { x: sceneX, y: sceneTopY },
     { x: frontConeX, y: frontConeTopY },
     { x: middleX, y: middleConeTopY },
+    { x: irisX, y: apertureTopY },
+    { x: irisX, y: apertureBottomY },
+    { x: middleX, y: middleConeBottomY },
+    { x: frontConeX, y: frontConeBottomY },
+    { x: sceneX, y: sceneBottomY },
+  ];
+  const rearCone = [
     { x: irisX, y: apertureTopY },
     { x: rearX, y: rearConeTopY },
     { x: sensorX, y: probeBlurTopY },
     { x: sensorX, y: probeBlurBottomY },
     { x: rearX, y: rearConeBottomY },
     { x: irisX, y: apertureBottomY },
-    { x: middleX, y: middleConeBottomY },
-    { x: frontConeX, y: frontConeBottomY },
   ];
   const topRayFront = [
     { x: sceneX, y: sceneTopY },
@@ -1166,7 +1168,7 @@ function updateZoomDemo(metrics) {
   const topRayRear = [
     { x: irisX, y: apertureTopY },
     { x: rearX, y: rearRayTopY },
-    { x: sensorX, y: probeBlurTopY },
+    { x: sensorX, y: projectedSensorTopY },
   ];
   const midRay = [
     { x: sceneX, y: centerY },
@@ -1185,10 +1187,11 @@ function updateZoomDemo(metrics) {
   const bottomRayRear = [
     { x: irisX, y: apertureBottomY },
     { x: rearX, y: rearRayBottomY },
-    { x: sensorX, y: probeBlurBottomY },
+    { x: sensorX, y: projectedSensorBottomY },
   ];
 
-  elements.zoomFieldCone.setAttribute("d", svgPath(cone, true));
+  elements.zoomFieldConeFront.setAttribute("d", svgPath(frontCone, true));
+  elements.zoomFieldConeRear.setAttribute("d", svgPath(rearCone, true));
   elements.zoomRayTopFront.setAttribute("d", svgPath(topRayFront));
   elements.zoomRayTopRear.setAttribute("d", svgPath(topRayRear));
   elements.zoomRayMid.setAttribute("d", svgPath(midRay));
@@ -1282,7 +1285,7 @@ function updateHelpText(metrics, sceneMetrics) {
   setHelp(helpTargets.contentWidthGroup, helpText("Content width.", `Current max width: ${formatPixels(displayState.width)}.`, "Widens or narrows the overall page layout."));
   setHelp(helpTargets.blurGroup, helpText("Glass blur.", `Current backdrop blur: ${formatPixels(displayState.blur)}.`, "Controls the frosted-glass blur behind cards and the menu."));
   setHelp(helpTargets.halfAngleVibranceGroup, helpText("Half-angle vibrance.", `Current vibrance: ${displayState.halfAngleVibrance.toFixed(0)}%.`, "Boosts or softens the teal half-angle ray in the zoom illustration without changing the optics math."));
-  setHelp(helpTargets.fieldConeVibranceGroup, helpText("Field cone vibrance.", `Current vibrance: ${displayState.fieldConeVibrance.toFixed(0)}%.`, "Boosts or softens the amber-to-teal zoom field cone without changing the optics math."));
+  setHelp(helpTargets.showOrangeLinesGroup, helpText("Orange ray overlay.", `Currently ${displayState.showOrangeLines ? "shown" : "hidden"}.`, "Toggles the amber boundary rays in the zoom illustration without affecting the field cone or optics math."));
   setHelp(helpTargets.radiusGroup, helpText("Corner radius.", `Current shared radius: ${formatPixels(displayState.radius)}.`, "Applies the same rounding to cards, bars, and the drawer."));
   setHelp(helpTargets.sceneForegroundGroup, helpText("Scene foreground distance.", `Current foreground plane = ${formatDistanceMeters(sceneMetrics.foregroundDistance)}.`, "This adjusts the foreground layer in the scene comparison only."));
   setHelp(helpTargets.sceneBackgroundGroup, helpText("Scene background distance.", `Current background plane = ${formatDistanceMeters(sceneMetrics.backgroundDistance)}.`, "This adjusts the background layer in the scene comparison only."));
@@ -1308,7 +1311,7 @@ function updateHelpText(metrics, sceneMetrics) {
   setHelp(helpTargets.hyperfocalBar, helpText("Hyperfocal distance H.", "This is the focus distance that pushes the far DOF limit to Infinity.", hyperfocalEquation));
 
   setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, `The moving sensor plane and dimension line show s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, "The outer amber rays bend at each lens group, pass through the iris poles, and only their post-iris segments dim as N closes down.", "The field cone lands on the current probe-blur disc, while the teal span still shows projected image height at the sensor plane.", `The amber ring marks the CoC threshold c = ${formatMillimeters(metrics.cocMm)} and the filled disc shows the current probe blur.`, "Approximate field slice: 2 * atan(sensor_half / f)."));
-  setHelp([helpTargets.sceneCard, elements.scenePreview], helpText("Scene blur comparison.", "Left panel stays sharp as a before view; right panel applies the live optical blur.", `Foreground plane is around ${formatDistanceMeters(sceneMetrics.foregroundDistance)} with blur ${formatMillimeters(sceneMetrics.foregroundBlurMm)}.`, `Subject plane follows z = ${formatDistanceMeters(sceneMetrics.subjectDistance)} with blur ${formatMillimeters(sceneMetrics.subjectBlurMm)}.`, `Background plane is around ${formatDistanceMeters(sceneMetrics.backgroundDistance)} with blur ${formatMillimeters(sceneMetrics.backgroundBlurMm)}.`, "The before view uses left, center, and right thirds for foreground, subject, and background dragging.", "Each layer uses the current thin-lens blur from the live f, N, s, z, and CoC settings."));
+  setHelp([helpTargets.sceneCard, elements.scenePreview], helpText("Scene blur comparison.", "Left panel stays sharp as a before view; right panel applies the live optical blur.", `Foreground plane is around ${formatDistanceMeters(sceneMetrics.foregroundDistance)} with blur ${formatMillimeters(sceneMetrics.foregroundBlurMm)}.`, `Subject plane follows z = ${formatDistanceMeters(sceneMetrics.subjectDistance)} with blur ${formatMillimeters(sceneMetrics.subjectBlurMm)}.`, `Background plane is around ${formatDistanceMeters(sceneMetrics.backgroundDistance)} with blur ${formatMillimeters(sceneMetrics.backgroundBlurMm)}.`, "The before view uses left, center, and right thirds for foreground, subject, and background selection; drag up or down within a third to change its distance.", "Each layer uses the current thin-lens blur from the live f, N, s, z, and CoC settings."));
   setHelp([helpTargets.imageChartCard, elements.imageChart], helpText("Image distance chart.", "Y-axis equation: s' = f s / (s - f).", "The focus marker shows the currently selected subject distance s."));
   setHelp([helpTargets.magnificationChartCard, elements.magnificationChart], helpText("Magnification chart.", "Y-axis equation: |m| = |-s' / s|.", "The bar values keep the sign, but the plot shows magnitude only."));
   setHelp([helpTargets.blurChartCard, elements.blurChart], helpText("Blur and depth-of-field chart.", "Blur equation: c(z) = D |s'_focus - z'| / z', with z' = f z / (z - f).", "The shaded region is where c(z) <= CoC.", `Current CoC threshold: ${formatMillimeters(metrics.cocMm)}.`));
@@ -1324,11 +1327,11 @@ function loadDisplaySettings() {
     const storedTheme = DISPLAY_THEMES.includes(stored.theme) ? stored.theme : DISPLAY_DEFAULTS.theme;
     displayState.theme = storedVersion < DISPLAY_STORAGE_VERSION && storedTheme === "sand" ? DISPLAY_DEFAULTS.theme : storedTheme;
     displayState.verbose = typeof stored.verbose === "boolean" ? stored.verbose : DISPLAY_DEFAULTS.verbose;
+    displayState.showOrangeLines = typeof stored.showOrangeLines === "boolean" ? stored.showOrangeLines : DISPLAY_DEFAULTS.showOrangeLines;
     displayState.transparency = quantize(clamp(safeNumber(stored.transparency, DISPLAY_DEFAULTS.transparency), 0, 60));
     displayState.width = quantize(clamp(safeNumber(stored.width, DISPLAY_DEFAULTS.width), 960, 1600), 20);
     displayState.blur = quantize(clamp(safeNumber(stored.blur, DISPLAY_DEFAULTS.blur), 0, 28));
     displayState.halfAngleVibrance = quantize(clamp(safeNumber(stored.halfAngleVibrance, DISPLAY_DEFAULTS.halfAngleVibrance), 40, 320), 5);
-    displayState.fieldConeVibrance = quantize(clamp(safeNumber(stored.fieldConeVibrance, DISPLAY_DEFAULTS.fieldConeVibrance), 40, 320), 5);
     displayState.radius = quantize(clamp(safeNumber(stored.radius, DISPLAY_DEFAULTS.radius), 18, 34));
     displayState.foregroundDistance = clamp(safeNumber(stored.foregroundDistance, DISPLAY_DEFAULTS.foregroundDistance), DISTANCE_FLOOR_METERS, DISTANCE_MAX_METERS);
     displayState.backgroundDistance = clamp(safeNumber(stored.backgroundDistance, DISPLAY_DEFAULTS.backgroundDistance), DISTANCE_FLOOR_METERS, DISTANCE_MAX_METERS);
@@ -1361,6 +1364,7 @@ function syncDisplayControls() {
   displayState.foregroundDistance = clamp(displayState.foregroundDistance, minDistance, DISTANCE_MAX_METERS);
   displayState.backgroundDistance = clamp(displayState.backgroundDistance, minDistance, DISTANCE_MAX_METERS);
   elements.verboseToggle.checked = displayState.verbose;
+  elements.showOrangeLinesToggle.checked = displayState.showOrangeLines;
   elements.transparencyRange.value = displayState.transparency.toFixed(0);
   elements.transparencyDisplay.textContent = `${displayState.transparency.toFixed(0)}%`;
   elements.contentWidthRange.value = displayState.width.toFixed(0);
@@ -1369,8 +1373,6 @@ function syncDisplayControls() {
   elements.blurStrengthDisplay.textContent = formatPixels(displayState.blur);
   elements.halfAngleVibranceRange.value = displayState.halfAngleVibrance.toFixed(0);
   elements.halfAngleVibranceDisplay.textContent = `${displayState.halfAngleVibrance.toFixed(0)}%`;
-  elements.fieldConeVibranceRange.value = displayState.fieldConeVibrance.toFixed(0);
-  elements.fieldConeVibranceDisplay.textContent = `${displayState.fieldConeVibrance.toFixed(0)}%`;
   elements.radiusRange.value = displayState.radius.toFixed(0);
   elements.radiusDisplay.textContent = formatPixels(displayState.radius);
   elements.sceneForegroundRange.value = unmapLogSlider(displayState.foregroundDistance, minDistance, DISTANCE_MAX_METERS).toFixed(0);
@@ -1486,7 +1488,9 @@ function syncControls() {
   elements.fNumberDisplay.textContent = formatFNumber(state.fNumber);
   elements.fNumberLightLoss.textContent = `exposure multiplier: ${formatScaleRatio(relativeLightTransmission(state.fNumber, EXPOSURE_REFERENCE_F_NUMBER))} vs ${formatFNumber(EXPOSURE_REFERENCE_F_NUMBER)}`;
   elements.cocRange.value = unmapLogSlider(state.coc, COC_MIN_MM, COC_MAX_MM).toFixed(0);
-  elements.cocNumber.value = state.coc.toFixed(3);
+  if (elements.cocNumber) {
+    elements.cocNumber.value = state.coc.toFixed(3);
+  }
   elements.cocDisplay.textContent = formatMillimeters(state.coc);
   elements.probeDistanceRange.value = unmapLogSlider(state.probeDistance, minDistance, DISTANCE_MAX_METERS).toFixed(0);
   elements.probeDistanceNumber.min = minDistance.toFixed(2);
@@ -1539,7 +1543,7 @@ function bindLogPair(rangeElement, numberElement, key, min, max, step = 1) {
     );
     render();
   });
-  numberElement.addEventListener("input", () => {
+  numberElement?.addEventListener("input", () => {
     state[key] = quantize(clamp(safeNumber(numberElement.value, state[key]), min, max), step);
     render();
   });
@@ -1631,13 +1635,14 @@ let activeSceneReferenceZone = "";
 function setActiveSceneReferenceZone(key) {
   activeSceneReferenceZone = key === "foreground" || key === "subject" || key === "background" ? key : "";
   [
-    ["foreground", elements.sceneReferenceForegroundZone, elements.sceneForegroundChip],
-    ["subject", elements.sceneReferenceSubjectZone, elements.sceneSubjectChip],
-    ["background", elements.sceneReferenceBackgroundZone, elements.sceneBackgroundChip],
-  ].forEach(([zoneKey, zoneElement, chipElement]) => {
+    ["foreground", elements.sceneReferenceForegroundZone, elements.sceneForegroundChip, elements.sceneReferenceForegroundArrows],
+    ["subject", elements.sceneReferenceSubjectZone, elements.sceneSubjectChip, elements.sceneReferenceSubjectArrows],
+    ["background", elements.sceneReferenceBackgroundZone, elements.sceneBackgroundChip, elements.sceneReferenceBackgroundArrows],
+  ].forEach(([zoneKey, zoneElement, chipElement, arrowsElement]) => {
     const isActive = zoneKey === activeSceneReferenceZone;
     zoneElement?.classList.toggle("is-active", isActive);
     chipElement?.classList.toggle("is-active", isActive);
+    arrowsElement?.classList.toggle("is-active", isActive);
   });
 }
 
@@ -1694,15 +1699,18 @@ function beginSceneDistanceDrag(key, event) {
     return;
   }
 
+  const previewElement = event.currentTarget.ownerSVGElement || elements.scenePreview;
   event.preventDefault();
   activeSceneDistanceDrag = {
     key,
     pointerId: event.pointerId,
     startX: event.clientX,
+    startY: event.clientY,
     startDistance: readSceneDistanceValue(key),
     startMinDistance: distanceMinMeters(),
     element: event.currentTarget,
-    previewElement: event.currentTarget.ownerSVGElement || elements.scenePreview,
+    previewElement,
+    dragAxis: previewElement === elements.scenePreviewReference ? "vertical" : "horizontal",
   };
   activeSceneDistanceDrag.element.classList.add("is-dragging");
   if (activeSceneDistanceDrag.previewElement === elements.scenePreviewReference) {
@@ -1718,12 +1726,17 @@ function updateSceneDistanceDrag(event) {
     return;
   }
 
-  const previewWidth = activeSceneDistanceDrag.previewElement.getBoundingClientRect().width;
+  const previewBounds = activeSceneDistanceDrag.previewElement.getBoundingClientRect();
+  const isVerticalDrag = activeSceneDistanceDrag.dragAxis === "vertical";
+  const dragSpan = isVerticalDrag ? previewBounds.height : previewBounds.width;
+  const dragDelta = isVerticalDrag
+    ? activeSceneDistanceDrag.startY - event.clientY
+    : event.clientX - activeSceneDistanceDrag.startX;
   const nextDistance = sceneDistanceFromDrag(
     activeSceneDistanceDrag.startDistance,
     activeSceneDistanceDrag.startMinDistance,
-    event.clientX - activeSceneDistanceDrag.startX,
-    previewWidth,
+    dragDelta,
+    dragSpan,
   );
   if (activeSceneDistanceDrag.previewElement === elements.scenePreviewReference) {
     setActiveSceneReferenceZone(activeSceneDistanceDrag.key);
@@ -1821,11 +1834,16 @@ elements.verboseToggle.addEventListener("change", () => {
   saveDisplaySettings();
 });
 
+elements.showOrangeLinesToggle.addEventListener("change", () => {
+  displayState.showOrangeLines = elements.showOrangeLinesToggle.checked;
+  applyDisplaySettings(true);
+  saveDisplaySettings();
+});
+
 bindDisplayRange(elements.transparencyRange, "transparency", 0, 60);
 bindDisplayRange(elements.contentWidthRange, "width", 960, 1600, 20);
 bindDisplayRange(elements.blurStrengthRange, "blur", 0, 28);
 bindDisplayRange(elements.halfAngleVibranceRange, "halfAngleVibrance", 40, 320, 5);
-bindDisplayRange(elements.fieldConeVibranceRange, "fieldConeVibrance", 40, 320, 5);
 bindDisplayRange(elements.radiusRange, "radius", 18, 34);
 bindDisplayDistanceRange(elements.sceneForegroundRange, "foregroundDistance");
 bindDisplayDistanceRange(elements.sceneBackgroundRange, "backgroundDistance");
