@@ -16,6 +16,10 @@ const SCENE_BASELINE_BRIGHTNESS_MAX_EV = 4;
 const SCENE_DYNAMIC_RANGE_MIN_STOPS = 6;
 const SCENE_DYNAMIC_RANGE_MAX_STOPS = 18;
 const SCENE_DYNAMIC_RANGE_REFERENCE_STOPS = 10;
+const SCENE_IMAGE_CROP_CENTER_X = 394;
+const SCENE_IMAGE_CROP_CENTER_Y = 176;
+const SCENE_IMAGE_BASE_VIEWBOX_WIDTH = 760;
+const SCENE_IMAGE_BASE_VIEWBOX_HEIGHT = 280;
 const SENSOR_FORMATS = Object.freeze([
   { key: "one_over_2_3", name: '1/2.3"', widthMm: 6.17, heightMm: 4.55 },
   { key: "one_inch", name: '1"', widthMm: 13.2, heightMm: 8.8 },
@@ -81,9 +85,9 @@ const presets = {
   phone: { focalLength: 6, focusDistance: 1.2, fNumber: 1.8, shutterSpeed: 1 / 60, iso: 50, coc: 0.008, probeDistance: 2.4 },
 };
 
-const state = { ...presets.portrait };
+const state = { ...presets.landscape };
 const displayState = { ...DISPLAY_DEFAULTS };
-let selectedPresetKey = "portrait";
+let selectedPresetKey = "landscape";
 
 const elements = {
   displayMenuToggle: document.getElementById("displayMenuToggle"),
@@ -1102,6 +1106,28 @@ function normalizeZoom(focalLengthMm) {
   return clamp((Math.log(focalLengthMm) - Math.log(min)) / (Math.log(max) - Math.log(min)), 0, 1);
 }
 
+function sceneImageCropScale(focalLengthMm) {
+  const zoom = normalizeZoom(focalLengthMm);
+  return 1 + Math.pow(zoom, 1.15) * 1.6;
+}
+
+function sceneImageViewBox(focalLengthMm) {
+  const cropScale = sceneImageCropScale(focalLengthMm);
+  const width = SCENE_IMAGE_BASE_VIEWBOX_WIDTH / cropScale;
+  const height = SCENE_IMAGE_BASE_VIEWBOX_HEIGHT / cropScale;
+  const x = clamp(
+    SCENE_IMAGE_CROP_CENTER_X - width / 2,
+    0,
+    SCENE_IMAGE_BASE_VIEWBOX_WIDTH - width,
+  );
+  const y = clamp(
+    SCENE_IMAGE_CROP_CENTER_Y - height / 2,
+    0,
+    SCENE_IMAGE_BASE_VIEWBOX_HEIGHT - height,
+  );
+  return { x, y, width, height };
+}
+
 function zoomDescriptor(focalLengthMm) {
   if (focalLengthMm < 24) {
     return "Wide coverage";
@@ -1446,6 +1472,7 @@ function updateZoomDemo(metrics) {
 
 function updateScenePreview(metrics) {
   const scene = scenePlaneDistances(metrics);
+  const imageViewBox = sceneImageViewBox(metrics.focalLengthMm);
   const palette = readVisualPalette();
   const foregroundBlurMm = blurDiameterMm(metrics.focalLengthMm, metrics.fNumber, metrics.focusDistanceMm, scene.foregroundDistance * 1000);
   const subjectBlurMm = blurDiameterMm(metrics.focalLengthMm, metrics.fNumber, metrics.focusDistanceMm, scene.subjectDistance * 1000);
@@ -1470,6 +1497,10 @@ function updateScenePreview(metrics) {
   setSceneLayerDepth(elements.sceneBackgroundLayer, previewBlurPixels(backgroundBlurMm, metrics.cocMm), 1);
   setSceneLayerDepth(elements.sceneSubjectLayer, previewBlurPixels(subjectBlurMm, metrics.cocMm), 1);
   setSceneLayerDepth(elements.sceneForegroundLayer, previewBlurPixels(foregroundBlurMm, metrics.cocMm), 1.02);
+  elements.scenePreview.setAttribute(
+    "viewBox",
+    `${imageViewBox.x.toFixed(1)} ${imageViewBox.y.toFixed(1)} ${imageViewBox.width.toFixed(1)} ${imageViewBox.height.toFixed(1)}`,
+  );
   elements.scenePreviewReference.style.filter = `brightness(${sceneBrightness.toFixed(3)}) contrast(${imageContrast.toFixed(3)})`;
   elements.scenePreview.style.filter = `brightness(${imageBrightness.toFixed(3)}) contrast(${imageContrast.toFixed(3)})`;
   if (elements.sceneImageGrainOverlay) {
@@ -1596,7 +1627,7 @@ function updateHelpText(metrics, sceneMetrics) {
   setHelp(helpTargets.hyperfocalBar, helpText("Hyperfocal distance H.", "This is the focus distance that pushes the far DOF limit to Infinity.", hyperfocalEquation));
 
   setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, `Sensor format is ${metrics.sensorFormatName} (${formatSensorSizeCentimeters(sensorFormatByKey(metrics.sensorFormatKey))}).`, `The moving sensor plane and dimension line show s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, "The outer amber rays bend at each lens group, pass through the iris poles, and only their post-iris segments dim as N closes down.", "The field cone lands on the current probe-blur disc, while the teal span still shows projected image height at the sensor plane.", `The amber ring marks the CoC threshold c = ${formatMillimeters(metrics.cocMm)} and the filled disc shows the current probe blur.`, "Both circles now use the same sensor-relative linear scale, and they cap at the illustrated sensor height when the full allowed blur range would exceed it.", "Approximate field slice: 2 * atan(sensor_half / f)."));
-  setHelp([helpTargets.sceneCard, elements.scenePreview], helpText("Scene and image comparison.", "Left panel shows the scene view; right panel shows the resulting image.", `Foreground plane is around ${formatDistanceMeters(sceneMetrics.foregroundDistance)} with blur ${formatMillimeters(sceneMetrics.foregroundBlurMm)}.`, `Subject plane follows z = ${formatDistanceMeters(sceneMetrics.subjectDistance)} with blur ${formatMillimeters(sceneMetrics.subjectBlurMm)}.`, `Background plane is around ${formatDistanceMeters(sceneMetrics.backgroundDistance)} with blur ${formatMillimeters(sceneMetrics.backgroundBlurMm)}.`, `Aperture, shutter speed, and ISO only add extra brightness to the image panel, with visible grain beginning above ISO ${formatIso(SCENE_IMAGE_GRAIN_START_ISO)}.`, `Menu controls set a shared baseline scene bias of ${formatExposureCompensation(displayState.sceneBrightnessEv)} and a shared baseline dynamic range of ${formatDynamicRangeStops(displayState.sceneDynamicRangeStops)} for both panels.`, "The scene view uses left, center, and right thirds for foreground, subject, and background selection; drag up or down within a third to change its distance.", "Each layer uses the current thin-lens blur from the live f, N, s, z, and CoC settings."));
+  setHelp([helpTargets.sceneCard, elements.scenePreview], helpText("Scene and image comparison.", "Left panel shows the scene view; right panel shows the resulting image.", `Foreground plane is around ${formatDistanceMeters(sceneMetrics.foregroundDistance)} with blur ${formatMillimeters(sceneMetrics.foregroundBlurMm)}.`, `Subject plane follows z = ${formatDistanceMeters(sceneMetrics.subjectDistance)} with blur ${formatMillimeters(sceneMetrics.subjectBlurMm)}.`, `Background plane is around ${formatDistanceMeters(sceneMetrics.backgroundDistance)} with blur ${formatMillimeters(sceneMetrics.backgroundBlurMm)}.`, `Longer focal lengths now crop the image panel tighter around the subject, while the scene panel stays as the wide reference view.`, `Aperture, shutter speed, and ISO only add extra brightness to the image panel, with visible grain beginning above ISO ${formatIso(SCENE_IMAGE_GRAIN_START_ISO)}.`, `Menu controls set a shared baseline scene bias of ${formatExposureCompensation(displayState.sceneBrightnessEv)} and a shared baseline dynamic range of ${formatDynamicRangeStops(displayState.sceneDynamicRangeStops)} for both panels.`, "The scene view uses left, center, and right thirds for foreground, subject, and background selection; drag up or down within a third to change its distance.", "Each layer uses the current thin-lens blur from the live f, N, s, z, and CoC settings."));
   setHelp([helpTargets.imageChartCard, elements.imageChart], helpText("Image distance chart.", "Y-axis equation: s' = f s / (s - f).", "The focus marker shows the currently selected subject distance s."));
   setHelp([helpTargets.magnificationChartCard, elements.magnificationChart], helpText("Magnification chart.", "Y-axis equation: |m| = |-s' / s|.", "The bar values keep the sign, but the plot shows magnitude only."));
   setHelp([helpTargets.blurChartCard, elements.blurChart], helpText("Blur and depth-of-field chart.", "Blur equation: c(z) = D |s'_focus - z'| / z', with z' = f z / (z - f).", "The shaded region is where c(z) <= CoC.", `Current CoC threshold: ${formatMillimeters(metrics.cocMm)}.`));

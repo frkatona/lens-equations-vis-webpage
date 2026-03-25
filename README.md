@@ -93,6 +93,7 @@ $$
       - ISO (also introduces grain)
       - shutter speed
     - motion blur 
+    - zoom/crop/perspective warp
 
 - [ ] add checkboxes to the optical blur card to incorporate simulation of different effects.  One will obviously be depth of field, then add 'brightness', 'crop', 
 
@@ -104,7 +105,6 @@ $$
 - [ ] presets slider detached from the card
 
 - [ ] sensor distance min/max bugged at focal length extremes
-
 
 - [ ] ~300 ms interaction to next paint (INP) after a few slider interactions
 
