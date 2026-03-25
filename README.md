@@ -75,15 +75,49 @@ $$
 - Derive CoC from sensor size, output size, viewing distance, and sharpness criterion instead of treating it as fixed.
 - Use measured lens data and real scene geometry for the preview instead of idealized sampled planes.
 
+---
+
 ## to-do
+
+### Features
+
+- [x] exposure triangle
+
+- [ ] sensor size
+
+#### half-baked
 
 - [ ] add checkboxes to the optical blur card to incorporate simulation of different effects.  One will obviously be depth of field, then add 'brightness', 'crop', 
 
+- [ ] consider tutorial exercises which guide to user to the most salient influences 
+  - "start with close-up and see how narrow the window of subject distances is where the CoC is focused"
+
+### Bugs/optimizations
+
+- [ ] presets slider detached from the card
+
+- [ ] sensor distance min/max bugged at focal length extremes
+
+
+- [ ] ~300 ms interaction to next paint (INP) after a few slider interactions
+
+### Questions
+
+- [ ] why does the sensor distance maximum increase so much at high focal lengths?  is that a bug or meaningful?  is the sensor distance not simply measured from the final lens element?
+
+- [ ] is image vs subject meaningfully distinct from the magnification?
+
+- [ ] what determines where the aperture should be?
+
+- [ ] what determines the required number of optical elements?
+
+### Update log
+
 - [x] make the light visibly enter through the aperture
 
-- [ ] guiding exercises
-  - "start with close-up and see how narrow the window of subject distances is where the CoC is focused
+- [x] added checkboxes to the hamburger menu for each graph (magnification, image vs subject, depth of field) and hide the graphs (formatting the page to fill the gaps) when the checkboxes are unchecked
+  - [x] unchecked image distance vs subject distance by default
 
-- [ ] where should the aperture be?
+- [x] in the 'before optical blur' object distance sliders, assign a color mapping to the distance value text so that their relative magnitudes are more clear at a glance
 
-- [ ] how many actual glass lenses are there usually?  does it change with different types of lenses?
+- [x] cleaned 'output' card, removing extraneous text and moving exposure triangle

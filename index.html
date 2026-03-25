@@ -40,42 +40,33 @@
           </button>
         </div>
 
-        <div class="drawer-group">
-          <span class="drawer-label">Theme</span>
-          <div class="theme-grid" role="group" aria-label="Theme presets">
-            <button class="theme-chip" data-theme-option="sand" type="button">
-              <span class="theme-swatch sand"></span>
-              Sand
-            </button>
-            <button class="theme-chip" data-theme-option="slate" type="button">
-              <span class="theme-swatch slate"></span>
-              Slate
-            </button>
-            <button class="theme-chip" data-theme-option="forest" type="button">
-              <span class="theme-swatch forest"></span>
-              Forest
-            </button>
-            <button class="theme-chip" data-theme-option="midnight" type="button">
-              <span class="theme-swatch midnight"></span>
-              Midnight
-            </button>
-            <button class="theme-chip" data-theme-option="ember" type="button">
-              <span class="theme-swatch ember"></span>
-              Ember
-            </button>
-            <button class="theme-chip" data-theme-option="aurora" type="button">
-              <span class="theme-swatch aurora"></span>
-              Aurora
-            </button>
+        <details class="drawer-group drawer-disclosure" id="themeDisclosure">
+          <summary class="drawer-disclosure-summary theme-disclosure-summary">
+            <span class="drawer-label">Theme</span>
+            <span class="drawer-disclosure-caret" aria-hidden="true"></span>
+          </summary>
+          <div class="drawer-disclosure-panel">
+            <div class="theme-grid" role="group" aria-label="Theme presets">
+              <button class="theme-chip" data-theme-option="slate" type="button">
+                <span class="theme-swatch slate"></span>
+                Slate
+              </button>
+              <button class="theme-chip" data-theme-option="midnight" type="button">
+                <span class="theme-swatch midnight"></span>
+                Midnight
+              </button>
+              <button class="theme-chip" data-theme-option="ember" type="button">
+                <span class="theme-swatch ember"></span>
+                Ember
+              </button>
+              <button class="theme-chip" data-theme-option="aurora" type="button">
+                <span class="theme-swatch aurora"></span>
+                Aurora
+              </button>
+            </div>
           </div>
-        </div>
+        </details>
 
-        <div class="drawer-group">
-          <label class="drawer-toggle" for="verboseToggle">
-            <span class="drawer-label">Verbose</span>
-            <input id="verboseToggle" type="checkbox" />
-          </label>
-        </div>
         <div class="drawer-group">
           <label class="drawer-toggle" for="interpolateToggle">
             <span class="drawer-label">Smooth animation</span>
@@ -88,22 +79,22 @@
             <input id="showOrangeLinesToggle" type="checkbox" />
           </label>
         </div>
-
         <div class="drawer-group">
-          <div class="drawer-row">
-            <label class="drawer-label" for="transparencyRange">
-              Window transparency
+          <span class="drawer-label">Graphs</span>
+          <div class="drawer-toggle-stack">
+            <label class="drawer-toggle chart-visibility-toggle" for="showMagnificationChartToggle">
+              <span class="drawer-label">Magnification</span>
+              <input id="showMagnificationChartToggle" type="checkbox" checked />
             </label>
-            <output id="transparencyDisplay">20%</output>
+            <label class="drawer-toggle chart-visibility-toggle" for="showImageChartToggle">
+              <span class="drawer-label">Image vs subject</span>
+              <input id="showImageChartToggle" type="checkbox" />
+            </label>
+            <label class="drawer-toggle chart-visibility-toggle" for="showBlurChartToggle">
+              <span class="drawer-label">Depth of field</span>
+              <input id="showBlurChartToggle" type="checkbox" checked />
+            </label>
           </div>
-          <input
-            id="transparencyRange"
-            type="range"
-            min="0"
-            max="60"
-            step="1"
-            value="20"
-          />
         </div>
 
         <div class="drawer-group">
@@ -142,23 +133,6 @@
 
         <div class="drawer-group">
           <div class="drawer-row">
-            <label class="drawer-label" for="halfAngleVibranceRange">
-              Half-angle vibrance
-            </label>
-            <output id="halfAngleVibranceDisplay">100%</output>
-          </div>
-          <input
-            id="halfAngleVibranceRange"
-            type="range"
-            min="40"
-            max="320"
-            step="5"
-            value="100"
-          />
-        </div>
-
-        <div class="drawer-group">
-          <div class="drawer-row">
             <label class="drawer-label" id="cocLabel" for="cocRange">
               CoC
             </label>
@@ -176,53 +150,23 @@
 
         <div class="drawer-group">
           <div class="drawer-row">
-            <label class="drawer-label" for="radiusRange">
-              Corner radius
+            <label class="drawer-label" for="sensorSizeRange">
+              Sensor size
             </label>
-            <output id="radiusDisplay">26 px</output>
+            <output id="sensorSizeDisplay">3.6 × 2.4 cm</output>
           </div>
-          <input
-            id="radiusRange"
-            type="range"
-            min="18"
-            max="34"
-            step="1"
-            value="26"
-          />
-        </div>
-
-        <div class="drawer-group drawer-group-scene-break">
-          <div class="drawer-row">
-            <label class="drawer-label" for="sceneForegroundRange">
-              Foreground distance
-            </label>
-            <output id="sceneForegroundDisplay">1.74 m</output>
+          <div class="range-input-shell range-input-shell-ticked">
+            <input
+              id="sensorSizeRange"
+              type="range"
+              min="0"
+              max="1000"
+              step="1"
+              value="0"
+            />
+            <div class="range-ticks" id="sensorSizeTicks" aria-hidden="true"></div>
           </div>
-          <input
-            id="sceneForegroundRange"
-            type="range"
-            min="0"
-            max="1000"
-            step="1"
-            value="0"
-          />
-        </div>
-
-        <div class="drawer-group">
-          <div class="drawer-row">
-            <label class="drawer-label" for="sceneBackgroundRange">
-              Background distance
-            </label>
-            <output id="sceneBackgroundDisplay">6.60 m</output>
-          </div>
-          <input
-            id="sceneBackgroundRange"
-            type="range"
-            min="0"
-            max="1000"
-            step="1"
-            value="0"
-          />
+          <p class="drawer-note" id="sensorSizeName">Full Frame</p>
         </div>
 
         <button class="reset-display" id="resetDisplayButton" type="button">
@@ -232,98 +176,40 @@
     </div>
 
     <div class="page-shell">
+      <aside class="preset-sidebar" aria-label="Preset camera setups">
+        <div class="preset-sidebar-rail">
+          <div class="preset-sidebar-menu">
+            <button class="preset-sidebar-tab" type="button" aria-label="Preset camera setups">
+              presets
+            </button>
+            <div class="preset-sidebar-panel">
+              <div class="preset-row">
+                <button class="preset-chip" data-preset="portrait" type="button">
+                  Portrait 85/2
+                </button>
+                <button class="preset-chip" data-preset="macro" type="button">
+                  Close-up 100/4
+                </button>
+                <button class="preset-chip" data-preset="landscape" type="button">
+                  Landscape 24/11
+                </button>
+                <button class="preset-chip" data-preset="sports" type="button">
+                  Sports 200/2.8
+                </button>
+                <button class="preset-chip" data-preset="phone" type="button">
+                  Phone 6/1.8
+                </button>
+              </div>
+            </div>
+          </div>
+          <label class="preset-sidebar-toggle" for="verboseToggle">
+            <span class="preset-sidebar-toggle-label">Verbose</span>
+            <input id="verboseToggle" type="checkbox" />
+          </label>
+        </div>
+      </aside>
+
       <main class="workspace">
-        <section class="panel controls-panel">
-          <div class="controls-intro">
-            <div class="controls-copy">
-              <h2>inputs</h2>
-            </div>
-            <p class="controls-brief">
-              Slide the camera variables and watch the bars, zoom sketch, and
-              graphs update immediately.
-            </p>
-          </div>
-
-          <div class="preset-row" aria-label="Preset camera setups">
-            <button class="preset-chip" data-preset="portrait" type="button">
-              Portrait 85/2
-            </button>
-            <button class="preset-chip" data-preset="macro" type="button">
-              Close-up 100/4
-            </button>
-            <button class="preset-chip" data-preset="landscape" type="button">
-              Landscape 24/11
-            </button>
-            <button class="preset-chip" data-preset="sports" type="button">
-              Sports 200/2.8
-            </button>
-            <button class="preset-chip" data-preset="phone" type="button">
-              Phone 6/1.8
-            </button>
-          </div>
-
-          <p class="status-line" id="summaryText">
-            f 85 mm | s 2.00 m | s' 88.8 mm | c(z) 0.629 mm | DOF 6.36 cm
-          </p>
-
-
-          <p class="controls-note">
-            Thin-lens sketch. Distances are measured from the lens plane.
-          </p>
-
-          <div class="controls-hidden-bank" aria-hidden="true">
-            <div class="control is-hidden">
-              <div class="control-top">
-                <label id="focusDistanceLabel" for="focusDistanceRange">s</label>
-                <output id="focusDistanceDisplay">2.00 m</output>
-              </div>
-              <div class="control-inputs">
-                <input
-                  id="focusDistanceRange"
-                  type="range"
-                  min="0"
-                  max="1000"
-                  step="1"
-                  value="0"
-                />
-                <input
-                  id="focusDistanceNumber"
-                  type="number"
-                  min="0.10"
-                  max="100"
-                  step="0.01"
-                  value="2.00"
-                />
-              </div>
-            </div>
-
-            <div class="control is-hidden">
-              <div class="control-top">
-                <label id="probeDistanceLabel" for="probeDistanceRange">z</label>
-                <output id="probeDistanceDisplay">3.00 m</output>
-              </div>
-              <div class="control-inputs">
-                <input
-                  id="probeDistanceRange"
-                  type="range"
-                  min="0"
-                  max="1000"
-                  step="1"
-                  value="0"
-                />
-                <input
-                  id="probeDistanceNumber"
-                  type="number"
-                  min="0.10"
-                  max="100"
-                  step="0.01"
-                  value="3.00"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
         <section class="overview-grid">
           <article class="panel scene-card">
             <div class="scene-compare-grid">
@@ -473,21 +359,21 @@
 
                   <g id="sceneForegroundChip" class="scene-distance-chip" transform="translate(14 242)">
                     <rect width="226" height="32" rx="16"></rect>
-                    <text id="sceneForegroundDistanceText" class="scene-distance-text" x="14" y="21">
+                    <text id="sceneForegroundDistanceText" class="scene-distance-text" x="113" y="21" text-anchor="middle">
                       foreground 1.74 m
                     </text>
                   </g>
 
                   <g id="sceneSubjectChip" class="scene-distance-chip" transform="translate(267 242)">
                     <rect width="226" height="32" rx="16"></rect>
-                    <text id="sceneSubjectDistanceText" class="scene-distance-text" x="14" y="21">
+                    <text id="sceneSubjectDistanceText" class="scene-distance-text" x="113" y="21" text-anchor="middle">
                       subject 3.00 m
                     </text>
                   </g>
 
                   <g id="sceneBackgroundChip" class="scene-distance-chip" transform="translate(520 242)">
                     <rect width="226" height="32" rx="16"></rect>
-                    <text id="sceneBackgroundDistanceText" class="scene-distance-text" x="14" y="21">
+                    <text id="sceneBackgroundDistanceText" class="scene-distance-text" x="113" y="21" text-anchor="middle">
                       background 6.60 m
                     </text>
                   </g>
@@ -672,6 +558,64 @@
                       />
                     </div>
                   </div>
+
+                  <div class="zoom-control-divider" aria-hidden="true"></div>
+
+                  <div class="control">
+                    <div class="control-top">
+                      <label id="shutterSpeedLabel" for="shutterSpeedRange">t</label>
+                      <output id="shutterSpeedDisplay">1/125 s</output>
+                    </div>
+                    <div class="control-inputs">
+                      <div class="range-input-shell range-input-shell-ticked">
+                        <input
+                          id="shutterSpeedRange"
+                          type="range"
+                          min="0"
+                          max="1000"
+                          step="1"
+                          value="0"
+                        />
+                        <div class="range-ticks" id="shutterSpeedTicks" aria-hidden="true"></div>
+                      </div>
+                      <input
+                        id="shutterSpeedNumber"
+                        type="number"
+                        min="0.00025"
+                        max="30"
+                        step="0.00001"
+                        value="0.008"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="control">
+                    <div class="control-top">
+                      <label id="isoLabel" for="isoRange">ISO</label>
+                      <output id="isoDisplay">100</output>
+                    </div>
+                    <div class="control-inputs">
+                      <div class="range-input-shell range-input-shell-ticked">
+                        <input
+                          id="isoRange"
+                          type="range"
+                          min="0"
+                          max="1000"
+                          step="1"
+                          value="0"
+                        />
+                        <div class="range-ticks" id="isoTicks" aria-hidden="true"></div>
+                      </div>
+                      <input
+                        id="isoNumber"
+                        type="number"
+                        min="50"
+                        max="12800"
+                        step="1"
+                        value="100"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -752,7 +696,7 @@
                   <line id="zoomSensorDistanceEndTick" class="dimension-tick" x1="514" y1="218" x2="514" y2="230"></line>
 
                   <text class="demo-label" id="zoomSensorLabel" x="520" y="88">sensor</text>
-                  <text class="demo-label" id="zoomFieldText" x="42" y="248">wide field</text>
+                  <text class="demo-label" id="zoomFieldText" x="86" y="128">wide field</text>
                   <text class="demo-label" id="zoomSensorDistanceText" x="470" y="250" text-anchor="middle">s' = 88.8 mm</text>
                 </svg>
 
@@ -769,90 +713,117 @@
           </article>
         </section>
 
-        <section class="charts-grid">
+        <section class="charts-grid" id="chartsGrid" data-visible-charts="2">
           <article class="panel output-bars-card">
-            <div class="section-head">
-              <h2>outputs</h2>
-              <p>
-                Each bar uses a fixed per-metric scale, so equal values stay at
-                equal heights across different setups.
-              </p>
-            </div>
-
-            <div class="quick-pills">
-              <div class="quick-pill">
-                <span>near</span>
-                <strong id="nearDofValue">1.97 m</strong>
-              </div>
-              <div class="quick-pill">
-                <span>far</span>
-                <strong id="farDofValue">2.03 m</strong>
-              </div>
-              <div class="quick-pill">
-                <span>DOF</span>
-                <strong id="totalDofValue">6.36 cm</strong>
-              </div>
-            </div>
-
-            <div class="bar-grid" aria-label="Derived output bar graph">
-              <div class="bar-column">
-                <strong class="bar-value" id="imageDistanceBarValue">2.00 m</strong>
-                <div class="bar-plot">
-                  <div class="bar-fill amber" id="imageDistanceBar"></div>
+            <div class="outputs-layout">
+              <div class="outputs-main">
+                <div class="quick-pills">
+                  <div class="quick-pill quick-pill-range" id="dofLimitsPill">
+                    <div class="quick-pill-pair">
+                      <span>near</span>
+                      <strong id="nearDofValue">1.97 m</strong>
+                    </div>
+                    <span class="quick-pill-arrow" aria-hidden="true">↔</span>
+                    <div class="quick-pill-pair">
+                      <span>far</span>
+                      <strong id="farDofValue">2.03 m</strong>
+                    </div>
+                  </div>
+                  <div class="quick-pill">
+                    <span>DOF</span>
+                    <strong id="totalDofValue">6.36 cm</strong>
+                  </div>
                 </div>
-                <span class="bar-label">s</span>
-                <span class="bar-note" id="imageDistanceNote">focus distance range</span>
+
+                <div class="bar-grid" aria-label="Derived output bar graph">
+                  <div class="bar-column">
+                    <strong class="bar-value" id="imageDistanceBarValue">2.00 m</strong>
+                    <div class="bar-plot">
+                      <div class="bar-fill amber" id="imageDistanceBar"></div>
+                    </div>
+                    <span class="bar-label" id="imageDistanceBarLabel">s</span>
+                    <span class="bar-note" id="imageDistanceNote">focus distance range</span>
+                  </div>
+
+                  <div class="bar-column">
+                    <strong class="bar-value" id="magnificationBarValue">-0.044x</strong>
+                    <div class="bar-plot">
+                      <div class="bar-fill teal" id="magnificationBar"></div>
+                    </div>
+                    <span class="bar-label" id="magnificationBarLabel">m</span>
+                    <span class="bar-note" id="magnificationNote">bar uses |m|</span>
+                  </div>
+
+                  <div class="bar-column">
+                    <strong class="bar-value" id="apertureBarValue">42.5 mm</strong>
+                    <div class="bar-plot">
+                      <div class="bar-fill sand" id="apertureBar"></div>
+                    </div>
+                    <span class="bar-label" id="apertureBarLabel">D</span>
+                    <span class="bar-note" id="apertureNote">opening size</span>
+                  </div>
+
+                  <div class="bar-column">
+                    <strong class="bar-value" id="probeBlurBarValue">0.629 mm</strong>
+                    <div class="bar-plot">
+                      <div class="bar-fill rust" id="probeBlurBar"></div>
+                      <div class="bar-threshold" id="probeBlurThreshold"></div>
+                    </div>
+                    <span class="bar-label" id="probeBlurBarLabel">c(z)</span>
+                    <span class="bar-note" id="probeBlurNote">marker = CoC threshold</span>
+                  </div>
+
+                  <div class="bar-column">
+                    <strong class="bar-value" id="totalDofBarValue">6.36 cm</strong>
+                    <div class="bar-plot">
+                      <div class="bar-fill moss" id="totalDofBar"></div>
+                    </div>
+                    <span class="bar-label" id="totalDofBarLabel">DOF</span>
+                    <span class="bar-note" id="totalDofNote">relative to focus distance</span>
+                  </div>
+
+                  <div class="bar-column">
+                    <strong class="bar-value" id="hyperfocalBarValue">120.5 m</strong>
+                    <div class="bar-plot">
+                      <div class="bar-fill plum" id="hyperfocalBar"></div>
+                    </div>
+                    <span class="bar-label" id="hyperfocalBarLabel">H</span>
+                    <span class="bar-note" id="hyperfocalNote">reference ceiling</span>
+                  </div>
+                </div>
               </div>
 
-              <div class="bar-column">
-                <strong class="bar-value" id="magnificationBarValue">-0.044x</strong>
-                <div class="bar-plot">
-                  <div class="bar-fill teal" id="magnificationBar"></div>
-                </div>
-                <span class="bar-label">m</span>
-                <span class="bar-note" id="magnificationNote">bar uses |m|</span>
-              </div>
-
-              <div class="bar-column">
-                <strong class="bar-value" id="apertureBarValue">42.5 mm</strong>
-                <div class="bar-plot">
-                  <div class="bar-fill sand" id="apertureBar"></div>
-                </div>
-                <span class="bar-label">D</span>
-                <span class="bar-note" id="apertureNote">opening size</span>
-              </div>
-
-              <div class="bar-column">
-                <strong class="bar-value" id="probeBlurBarValue">0.629 mm</strong>
-                <div class="bar-plot">
-                  <div class="bar-fill rust" id="probeBlurBar"></div>
-                  <div class="bar-threshold" id="probeBlurThreshold"></div>
-                </div>
-                <span class="bar-label">c(z)</span>
-                <span class="bar-note" id="probeBlurNote">marker = CoC threshold</span>
-              </div>
-
-              <div class="bar-column">
-                <strong class="bar-value" id="totalDofBarValue">6.36 cm</strong>
-                <div class="bar-plot">
-                  <div class="bar-fill moss" id="totalDofBar"></div>
-                </div>
-                <span class="bar-label">DOF</span>
-                <span class="bar-note" id="totalDofNote">relative to focus distance</span>
-              </div>
-
-              <div class="bar-column">
-                <strong class="bar-value" id="hyperfocalBarValue">120.5 m</strong>
-                <div class="bar-plot">
-                  <div class="bar-fill plum" id="hyperfocalBar"></div>
-                </div>
-                <span class="bar-label">H</span>
-                <span class="bar-note" id="hyperfocalNote">reference ceiling</span>
-              </div>
+              <aside class="exposure-triangle-card outputs-exposure-card" id="exposureTriangleCard" aria-label="Exposure triangle">
+                <svg
+                  class="exposure-triangle"
+                  viewBox="0 0 280 180"
+                  aria-hidden="true"
+                >
+                  <defs>
+                    <linearGradient id="exposureTriangleStroke" x1="0%" y1="100%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="rgba(194,106,44,0.72)"></stop>
+                      <stop offset="100%" stop-color="rgba(27,113,118,0.74)"></stop>
+                    </linearGradient>
+                  </defs>
+                  <path
+                    class="exposure-triangle-shape"
+                    d="M140 10 L18 158 L262 158 Z"
+                  ></path>
+                  <text class="exposure-triangle-label" x="84" y="63" text-anchor="middle">aperture</text>
+                  <text class="exposure-triangle-value" id="exposureTriangleApertureValue" x="84" y="84" text-anchor="middle">f/2.0</text>
+                  <text class="exposure-triangle-subtext" x="84" y="98" text-anchor="middle">(depth of field)</text>
+                  <text class="exposure-triangle-label" x="140" y="126" text-anchor="middle">shutter speed</text>
+                  <text class="exposure-triangle-value" id="exposureTriangleShutterValue" x="140" y="147" text-anchor="middle">1/125 s</text>
+                  <text class="exposure-triangle-subtext" x="140" y="161" text-anchor="middle">(motion blur)</text>
+                  <text class="exposure-triangle-label" x="196" y="63" text-anchor="middle">ISO</text>
+                  <text class="exposure-triangle-value" id="exposureTriangleIsoValue" x="196" y="84" text-anchor="middle">100</text>
+                  <text class="exposure-triangle-subtext" x="196" y="98" text-anchor="middle">(grain)</text>
+                </svg>
+              </aside>
             </div>
           </article>
 
-          <article class="panel chart-card">
+          <article class="panel chart-card" id="magnificationChartCard">
             <div class="chart-heading">
               <h3>magnification vs. subject distance</h3>
               <p>Bar values show the signed image flip, but this plot shows |m|.</p>
@@ -863,7 +834,7 @@
             ></canvas>
           </article>
 
-          <article class="panel chart-card">
+          <article class="panel chart-card" id="imageChartCard" hidden>
             <div class="chart-heading">
               <h3>image distance vs. subject distance</h3>
               <p>Near focus demands much more sensor travel.</p>
@@ -871,7 +842,7 @@
             <canvas id="imageChart" aria-label="Image distance chart"></canvas>
           </article>
 
-          <article class="panel chart-card">
+          <article class="panel chart-card" id="blurChartCard">
             <div class="chart-heading">
               <h3>depth of field</h3>
               <p>The shaded span stays at or below the chosen circle of confusion.</p>
@@ -886,6 +857,58 @@
         zooms also breathe, shift principal planes, and depart from this ideal
         geometry.
       </footer>
+
+      <div class="controls-hidden-bank" hidden aria-hidden="true">
+        <div class="control is-hidden">
+          <div class="control-top">
+            <label id="focusDistanceLabel" for="focusDistanceRange">s</label>
+            <output id="focusDistanceDisplay">2.00 m</output>
+          </div>
+          <div class="control-inputs">
+            <input
+              id="focusDistanceRange"
+              type="range"
+              min="0"
+              max="1000"
+              step="1"
+              value="0"
+            />
+            <input
+              id="focusDistanceNumber"
+              type="number"
+              min="0.10"
+              max="100"
+              step="0.01"
+              value="2.00"
+            />
+          </div>
+        </div>
+
+        <div class="control is-hidden">
+          <div class="control-top">
+            <label id="probeDistanceLabel" for="probeDistanceRange">z</label>
+            <output id="probeDistanceDisplay">3.00 m</output>
+          </div>
+          <div class="control-inputs">
+            <input
+              id="probeDistanceRange"
+              type="range"
+              min="0"
+              max="1000"
+              step="1"
+              value="0"
+            />
+            <input
+              id="probeDistanceNumber"
+              type="number"
+              min="0.10"
+              max="100"
+              step="0.01"
+              value="3.00"
+            />
+          </div>
+        </div>
+      </div>
     </div>
 
     <noscript>
