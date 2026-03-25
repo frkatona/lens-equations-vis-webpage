@@ -1143,7 +1143,8 @@ input[type="number"] {
 }
 
 #zoomLensDemo .ray-mid {
-  stroke: rgba(27, 113, 118, 0.92);
+  stroke: rgba(109, 229, 236, 0.98);
+  stroke-width: 4.8;
 }
 
 #zoomLensDemo .lens-barrel {

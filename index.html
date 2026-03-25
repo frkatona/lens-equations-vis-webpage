@@ -136,6 +136,40 @@
 
         <div class="drawer-group">
           <div class="drawer-row">
+            <label class="drawer-label" for="halfAngleVibranceRange">
+              Half-angle vibrance
+            </label>
+            <output id="halfAngleVibranceDisplay">100%</output>
+          </div>
+          <input
+            id="halfAngleVibranceRange"
+            type="range"
+            min="40"
+            max="320"
+            step="5"
+            value="100"
+          />
+        </div>
+
+        <div class="drawer-group">
+          <div class="drawer-row">
+            <label class="drawer-label" for="fieldConeVibranceRange">
+              Field cone vibrance
+            </label>
+            <output id="fieldConeVibranceDisplay">100%</output>
+          </div>
+          <input
+            id="fieldConeVibranceRange"
+            type="range"
+            min="40"
+            max="320"
+            step="5"
+            value="100"
+          />
+        </div>
+
+        <div class="drawer-group">
+          <div class="drawer-row">
             <label class="drawer-label" for="radiusRange">
               Corner radius
             </label>
@@ -653,8 +687,8 @@
                   <stop offset="100%" stop-color="rgba(27,113,118,0.28)" />
                 </linearGradient>
                 <linearGradient id="fieldGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stop-color="rgba(194,106,44,0.06)" />
-                  <stop offset="100%" stop-color="rgba(27,113,118,0.20)" />
+                  <stop id="fieldGradientStart" offset="0%" stop-color="rgba(194,106,44,0.06)" />
+                  <stop id="fieldGradientEnd" offset="100%" stop-color="rgba(27,113,118,0.20)" />
                 </linearGradient>
               </defs>
 
@@ -662,9 +696,11 @@
               <line class="demo-axis" x1="48" y1="140" x2="574" y2="140"></line>
 
               <path id="zoomFieldCone" class="field-cone" d=""></path>
-              <path id="zoomRayTop" class="ray ray-top" d=""></path>
+              <path id="zoomRayTopFront" class="ray ray-top" d=""></path>
+              <path id="zoomRayTopRear" class="ray ray-top" d=""></path>
               <path id="zoomRayMid" class="ray ray-mid" d=""></path>
-              <path id="zoomRayBottom" class="ray ray-bottom" d=""></path>
+              <path id="zoomRayBottomFront" class="ray ray-bottom" d=""></path>
+              <path id="zoomRayBottomRear" class="ray ray-bottom" d=""></path>
 
               <path id="zoomBarrelOuter" class="lens-barrel" d=""></path>
               <rect id="zoomBarrelInner" class="lens-barrel-inner" x="178" y="88" width="326" height="104" rx="16"></rect>
