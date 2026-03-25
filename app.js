@@ -845,6 +845,15 @@ function svgPath(points, close = false) {
   return `${segments.join(" ")}${close ? " Z" : ""}`;
 }
 
+function interpolateLineY(x, startX, startY, endX, endY) {
+  const deltaX = endX - startX;
+  if (Math.abs(deltaX) < 0.001) {
+    return (startY + endY) / 2;
+  }
+  const t = clamp((x - startX) / deltaX, 0, 1);
+  return startY + (endY - startY) * t;
+}
+
 function normalizeZoom(focalLengthMm) {
   const min = FOCAL_LENGTH_MIN_MM;
   const max = FOCAL_LENGTH_MAX_MM;
@@ -956,10 +965,11 @@ function updateZoomDemo(metrics) {
   const barrelInnerX = frontX - frontRadiusX - 6;
   const barrelInnerRightX = Math.max(middleX + middleRadiusX + 18, rearX + rearRadiusX + 10);
   const sceneHalfHeight = 82 - zoom * 52;
-  const frontHalfHeight = 48 - zoom * 4;
-  const middleHalfHeight = 30 - zoom * 3;
   const rearHalfHeight = 18 - zoom * 2;
-  const irisRadius = clamp(12 - (metrics.fNumber - F_NUMBER_MIN) * 0.4, 5, 12);
+  const apertureOpenness = clamp(metrics.apertureDiameterMm / apertureDiameterMm(metrics.focalLengthMm, F_NUMBER_MIN), 0.06, 1);
+  const irisX = 350 + zoom * 52;
+  const irisRadius = 4.5 + apertureOpenness * 9.5;
+  const irisClearHalfHeight = Math.max(irisRadius - 1.4, 2.8);
   const fieldAngle = (2 * Math.atan(18 / metrics.focalLengthMm) * 180) / Math.PI;
   const sensorBounds = sensorDistanceBoundsMm(metrics.focalLengthMm);
   const lensPlaneX = rearX + rearRadiusX + 4;
@@ -975,7 +985,23 @@ function updateZoomDemo(metrics) {
   const cocDisplayMax = Math.max(metrics.probeBlurMm, metrics.cocMm * 1.6, 0.06);
   const cocRadius = mapDemoRadiusMm(metrics.cocMm, cocDisplayMax, 6, 13);
   const probeBlurRadius = mapDemoRadiusMm(metrics.probeBlurMm, cocDisplayMax, 4, 28);
+  const apertureTransmission = clamp(relativeLightTransmission(metrics.fNumber, F_NUMBER_MIN), 0, 1);
+  const visualBundleIntensity = 0.24 + 0.76 * Math.pow(apertureTransmission, 0.32);
   const verbose = displayState.verbose;
+  const sceneTopY = centerY - sceneHalfHeight;
+  const sceneBottomY = centerY + sceneHalfHeight;
+  const apertureTopY = centerY - irisClearHalfHeight;
+  const apertureBottomY = centerY + irisClearHalfHeight;
+  const frontConeX = frontX - 12;
+  const frontRayX = frontX - 10;
+  const frontConeTopY = interpolateLineY(frontConeX, sceneX, sceneTopY, irisX, apertureTopY);
+  const frontConeBottomY = interpolateLineY(frontConeX, sceneX, sceneBottomY, irisX, apertureBottomY);
+  const frontRayTopY = interpolateLineY(frontRayX, sceneX, sceneTopY, irisX, apertureTopY);
+  const frontRayBottomY = interpolateLineY(frontRayX, sceneX, sceneBottomY, irisX, apertureBottomY);
+  const middleConeTopY = interpolateLineY(middleX, sceneX, sceneTopY, irisX, apertureTopY);
+  const middleConeBottomY = interpolateLineY(middleX, sceneX, sceneBottomY, irisX, apertureBottomY);
+  const rearConeTopY = interpolateLineY(rearX, irisX, apertureTopY, sensorX, projectedSensorTopY);
+  const rearConeBottomY = interpolateLineY(rearX, irisX, apertureBottomY, sensorX, projectedSensorBottomY);
 
   elements.zoomBarrelInner.setAttribute("x", barrelInnerX.toFixed(1));
   elements.zoomBarrelInner.setAttribute("y", barrelInnerY.toFixed(1));
@@ -990,7 +1016,7 @@ function updateZoomDemo(metrics) {
   elements.zoomRearGroup.setAttribute("cx", rearX.toFixed(1));
   elements.zoomRearGroup.setAttribute("rx", rearRadiusX.toFixed(1));
   elements.zoomRearGroup.setAttribute("ry", rearRadiusY.toFixed(1));
-  elements.zoomIris.setAttribute("cx", (350 + zoom * 52).toFixed(1));
+  elements.zoomIris.setAttribute("cx", irisX.toFixed(1));
   elements.zoomIris.setAttribute("r", irisRadius.toFixed(1));
   elements.zoomLensPlane.setAttribute("x1", lensPlaneX.toFixed(1));
   elements.zoomLensPlane.setAttribute("x2", lensPlaneX.toFixed(1));
@@ -1020,37 +1046,46 @@ function updateZoomDemo(metrics) {
   elements.zoomCocRing.setAttribute("cx", sensorX.toFixed(1));
   elements.zoomCocRing.setAttribute("cy", centerY.toFixed(1));
   elements.zoomCocRing.setAttribute("r", cocRadius.toFixed(1));
+  elements.zoomFieldCone.style.opacity = (0.26 + visualBundleIntensity * 0.44).toFixed(3);
+  elements.zoomRayTop.style.opacity = visualBundleIntensity.toFixed(3);
+  elements.zoomRayMid.style.opacity = (0.34 + visualBundleIntensity * 0.52).toFixed(3);
+  elements.zoomRayBottom.style.opacity = visualBundleIntensity.toFixed(3);
 
   const cone = [
-    { x: sceneX, y: centerY - sceneHalfHeight },
-    { x: frontX - 12, y: centerY - frontHalfHeight },
-    { x: middleX, y: centerY - middleHalfHeight },
-    { x: rearX, y: centerY - rearHalfHeight },
+    { x: sceneX, y: sceneTopY },
+    { x: frontConeX, y: frontConeTopY },
+    { x: middleX, y: middleConeTopY },
+    { x: irisX, y: apertureTopY },
+    { x: rearX, y: rearConeTopY },
     { x: sensorX, y: projectedSensorTopY },
     { x: sensorX, y: projectedSensorBottomY },
-    { x: rearX, y: centerY + rearHalfHeight },
-    { x: middleX, y: centerY + middleHalfHeight },
-    { x: frontX - 12, y: centerY + frontHalfHeight },
+    { x: rearX, y: rearConeBottomY },
+    { x: irisX, y: apertureBottomY },
+    { x: middleX, y: middleConeBottomY },
+    { x: frontConeX, y: frontConeBottomY },
   ];
   const topRay = [
-    { x: sceneX, y: centerY - sceneHalfHeight },
-    { x: frontX - 10, y: centerY - sceneHalfHeight * 0.72 },
-    { x: middleX, y: centerY - (sensorPlaneHalfHeight + 18 + zoom * 12) },
-    { x: rearX, y: centerY - (sensorPlaneHalfHeight + 8) },
+    { x: sceneX, y: sceneTopY },
+    { x: frontRayX, y: frontRayTopY },
+    { x: middleX, y: middleConeTopY },
+    { x: irisX, y: apertureTopY },
+    { x: rearX, y: rearConeTopY },
     { x: sensorX, y: projectedSensorTopY },
   ];
   const midRay = [
     { x: sceneX, y: centerY },
-    { x: frontX - 10, y: centerY },
+    { x: frontRayX, y: centerY },
     { x: middleX, y: centerY },
+    { x: irisX, y: centerY },
     { x: rearX, y: centerY },
     { x: sensorX, y: centerY },
   ];
   const bottomRay = [
-    { x: sceneX, y: centerY + sceneHalfHeight },
-    { x: frontX - 10, y: centerY + sceneHalfHeight * 0.72 },
-    { x: middleX, y: centerY + (sensorPlaneHalfHeight + 18 + zoom * 12) },
-    { x: rearX, y: centerY + (sensorPlaneHalfHeight + 8) },
+    { x: sceneX, y: sceneBottomY },
+    { x: frontRayX, y: frontRayBottomY },
+    { x: middleX, y: middleConeBottomY },
+    { x: irisX, y: apertureBottomY },
+    { x: rearX, y: rearConeBottomY },
     { x: sensorX, y: projectedSensorBottomY },
   ];
 
@@ -1167,7 +1202,7 @@ function updateHelpText(metrics, sceneMetrics) {
   setHelp(helpTargets.totalDofBar, helpText("Total depth of field.", hyperfocalEquation, nearEquation, farEquation, totalEquation));
   setHelp(helpTargets.hyperfocalBar, helpText("Hyperfocal distance H.", "This is the focus distance that pushes the far DOF limit to Infinity.", hyperfocalEquation));
 
-  setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, `The moving sensor plane and dimension line show s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, "The rear rays keep a fixed exit angle, and the teal span shows the projected image height at the sensor plane.", "If that span is shorter than the sensor, the image fits inside it; if it runs past the sensor ends, the sensor is cropping the projection.", `The amber ring marks the CoC threshold c = ${formatMillimeters(metrics.cocMm)} and the filled disc shows the current probe blur.`, "Approximate field slice: 2 * atan(sensor_half / f)."));
+  setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, `The moving sensor plane and dimension line show s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, "The iris now pinches the amber bundle as N closes down, while the teal span still shows the projected image height at the sensor plane.", "If that span is shorter than the sensor, the image fits inside it; if it runs past the sensor ends, the sensor is cropping the projection.", `The amber ring marks the CoC threshold c = ${formatMillimeters(metrics.cocMm)} and the filled disc shows the current probe blur.`, "Approximate field slice: 2 * atan(sensor_half / f)."));
   setHelp([helpTargets.sceneCard, elements.scenePreview], helpText("Scene blur comparison.", "Left panel stays sharp as a before view; right panel applies the live optical blur.", `Foreground plane is around ${formatDistanceMeters(sceneMetrics.foregroundDistance)} with blur ${formatMillimeters(sceneMetrics.foregroundBlurMm)}.`, `Subject plane follows z = ${formatDistanceMeters(sceneMetrics.subjectDistance)} with blur ${formatMillimeters(sceneMetrics.subjectBlurMm)}.`, `Background plane is around ${formatDistanceMeters(sceneMetrics.backgroundDistance)} with blur ${formatMillimeters(sceneMetrics.backgroundBlurMm)}.`, "The before view uses left, center, and right thirds for foreground, subject, and background dragging.", "Each layer uses the current thin-lens blur from the live f, N, s, z, and CoC settings."));
   setHelp([helpTargets.imageChartCard, elements.imageChart], helpText("Image distance chart.", "Y-axis equation: s' = f s / (s - f).", "The focus marker shows the currently selected subject distance s."));
   setHelp([helpTargets.magnificationChartCard, elements.magnificationChart], helpText("Magnification chart.", "Y-axis equation: |m| = |-s' / s|.", "The bar values keep the sign, but the plot shows magnitude only."));
