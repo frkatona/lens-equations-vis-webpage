@@ -11,6 +11,11 @@ const SCENE_IMAGE_BRIGHTNESS_REFERENCE_F_NUMBER = EXPOSURE_REFERENCE_F_NUMBER;
 const SCENE_IMAGE_BRIGHTNESS_REFERENCE_SHUTTER_SECONDS = 1 / 125;
 const SCENE_IMAGE_BRIGHTNESS_REFERENCE_ISO = 100;
 const SCENE_IMAGE_GRAIN_START_ISO = 800;
+const SCENE_BASELINE_BRIGHTNESS_MIN_EV = -4;
+const SCENE_BASELINE_BRIGHTNESS_MAX_EV = 4;
+const SCENE_DYNAMIC_RANGE_MIN_STOPS = 6;
+const SCENE_DYNAMIC_RANGE_MAX_STOPS = 18;
+const SCENE_DYNAMIC_RANGE_REFERENCE_STOPS = 10;
 const SENSOR_FORMATS = Object.freeze([
   { key: "one_over_2_3", name: '1/2.3"', widthMm: 6.17, heightMm: 4.55 },
   { key: "one_inch", name: '1"', widthMm: 13.2, heightMm: 8.8 },
@@ -60,6 +65,8 @@ const DISPLAY_DEFAULTS = Object.freeze({
   transparency: 20,
   width: 1320,
   blur: 18,
+  sceneBrightnessEv: 0,
+  sceneDynamicRangeStops: SCENE_DYNAMIC_RANGE_REFERENCE_STOPS,
   halfAngleVibrance: 100,
   radius: 26,
   foregroundDistance: 1.74,
@@ -94,6 +101,10 @@ const elements = {
   contentWidthDisplay: document.getElementById("contentWidthDisplay"),
   blurStrengthRange: document.getElementById("blurStrengthRange"),
   blurStrengthDisplay: document.getElementById("blurStrengthDisplay"),
+  sceneBrightnessRange: document.getElementById("sceneBrightnessRange"),
+  sceneBrightnessDisplay: document.getElementById("sceneBrightnessDisplay"),
+  sceneDynamicRangeRange: document.getElementById("sceneDynamicRangeRange"),
+  sceneDynamicRangeDisplay: document.getElementById("sceneDynamicRangeDisplay"),
   halfAngleVibranceRange: document.getElementById("halfAngleVibranceRange"),
   halfAngleVibranceDisplay: document.getElementById("halfAngleVibranceDisplay"),
   sensorSizeRange: document.getElementById("sensorSizeRange"),
@@ -235,6 +246,8 @@ const elements = {
   imageChartCard: document.getElementById("imageChartCard"),
   magnificationChartCard: document.getElementById("magnificationChartCard"),
   blurChartCard: document.getElementById("blurChartCard"),
+  presetSidebarMenu: document.querySelector(".preset-sidebar-menu"),
+  presetSidebarTab: document.querySelector(".preset-sidebar-tab"),
   presetButtons: Array.from(document.querySelectorAll("[data-preset]")),
   themeButtons: Array.from(document.querySelectorAll("[data-theme-option]")),
 };
@@ -244,6 +257,8 @@ const helpTargets = {
   transparencyGroup: elements.transparencyRange?.closest(".drawer-group") || null,
   contentWidthGroup: elements.contentWidthRange.closest(".drawer-group"),
   blurGroup: elements.blurStrengthRange.closest(".drawer-group"),
+  sceneBrightnessGroup: elements.sceneBrightnessRange?.closest(".drawer-group") || null,
+  sceneDynamicRangeGroup: elements.sceneDynamicRangeRange?.closest(".drawer-group") || null,
   halfAngleVibranceGroup: elements.halfAngleVibranceRange?.closest(".drawer-group") || null,
   showOrangeLinesGroup: elements.showOrangeLinesToggle.closest(".drawer-group"),
   magnificationChartToggleGroup: elements.showMagnificationChartToggle.closest(".chart-visibility-toggle"),
@@ -277,6 +292,18 @@ const helpTargets = {
   magnificationChartCard: elements.magnificationChartCard,
   blurChartCard: elements.blurChartCard,
 };
+
+function isPresetSidebarOpen() {
+  return elements.presetSidebarMenu?.classList.contains("is-open") ?? false;
+}
+
+function setPresetSidebarOpen(isOpen) {
+  if (!elements.presetSidebarMenu || !elements.presetSidebarTab) {
+    return;
+  }
+  elements.presetSidebarMenu.classList.toggle("is-open", isOpen);
+  elements.presetSidebarTab.setAttribute("aria-expanded", String(isOpen));
+}
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -316,6 +343,7 @@ function sensorFormatDiagonalMm(sensorFormat) {
 const SENSOR_FORMAT_DIAGONALS_MM = Object.freeze(SENSOR_FORMATS.map(sensorFormatDiagonalMm));
 const SENSOR_FORMAT_MIN_DIAGONAL_MM = SENSOR_FORMAT_DIAGONALS_MM[0];
 const SENSOR_FORMAT_MAX_DIAGONAL_MM = SENSOR_FORMAT_DIAGONALS_MM[SENSOR_FORMAT_DIAGONALS_MM.length - 1];
+const SENSOR_FORMAT_MAX_HEIGHT_MM = Math.max(...SENSOR_FORMATS.map((sensorFormat) => sensorFormat.heightMm));
 
 function sensorFormatByKey(key) {
   return SENSOR_FORMATS.find((sensorFormat) => sensorFormat.key === key) || SENSOR_FORMATS[4];
@@ -623,6 +651,14 @@ function formatPixels(value) {
   return `${value.toFixed(0)} px`;
 }
 
+function formatExposureCompensation(ev) {
+  return `${ev >= 0 ? "+" : ""}${ev.toFixed(1)} EV`;
+}
+
+function formatDynamicRangeStops(stops) {
+  return `${stops.toFixed(1)} stops`;
+}
+
 function formatInputMillimeters(value) {
   if (Math.abs(value) < 10) {
     return value.toFixed(3);
@@ -641,6 +677,10 @@ function formatScaleRatio(value) {
   const magnitude = Math.abs(value);
   const precision = magnitude < 0.01 ? 4 : magnitude < 0.1 ? 3 : magnitude < 1 ? 2 : 1;
   return `${magnitude.toFixed(precision)}x`;
+}
+
+function formatScaleRatioValue(value) {
+  return formatScaleRatio(value).replace(/x$/, "");
 }
 
 function formatRatio(value) {
@@ -1107,7 +1147,7 @@ function previewBlurPixels(blurMm, cocMm) {
   return clamp(Math.pow(ratio, 0.64) * 1.85, 0, 24);
 }
 
-function sceneImageBrightness(fNumber, shutterSpeedSeconds, iso) {
+function sceneImageBrightness(fNumber, shutterSpeedSeconds, iso, sceneBrightnessEv, dynamicRangeStops) {
   const apertureGain = relativeLightTransmission(fNumber, SCENE_IMAGE_BRIGHTNESS_REFERENCE_F_NUMBER);
   const exposureGain = Math.max(
     apertureGain
@@ -1115,8 +1155,18 @@ function sceneImageBrightness(fNumber, shutterSpeedSeconds, iso) {
       * (iso / SCENE_IMAGE_BRIGHTNESS_REFERENCE_ISO),
     0.0001,
   );
-  const exposureStops = Math.log2(exposureGain);
-  return clamp(1 + exposureStops * 0.11, 0.58, 1.85);
+  const exposureStops = Math.log2(exposureGain) + sceneBrightnessEv;
+  const brightnessPerStop = 1.1 / Math.max(dynamicRangeStops, 1);
+  return clamp(1 + exposureStops * brightnessPerStop, 0.44, 2.05);
+}
+
+function sceneImageContrast(dynamicRangeStops) {
+  const dynamicRangeDelta = clamp(
+    dynamicRangeStops - SCENE_DYNAMIC_RANGE_REFERENCE_STOPS,
+    SCENE_DYNAMIC_RANGE_MIN_STOPS - SCENE_DYNAMIC_RANGE_REFERENCE_STOPS,
+    SCENE_DYNAMIC_RANGE_MAX_STOPS - SCENE_DYNAMIC_RANGE_REFERENCE_STOPS,
+  );
+  return clamp(1 - dynamicRangeDelta * 0.04, 0.72, 1.16);
 }
 
 function sceneImageGrainAmount(iso) {
@@ -1185,14 +1235,15 @@ function updateZoomDemo(metrics) {
   const middleRadiusY = 54;
   const rearRadiusX = 16;
   const rearRadiusY = 48;
-  const sensorPlaneTopY = barrelInnerY;
-  const sensorPlaneBottomY = barrelInnerBottomY;
-  const sensorPlaneHalfHeight = (sensorPlaneBottomY - sensorPlaneTopY) / 2;
   const frontX = 202;
   const middleX = 324 + zoom * 56;
   const rearX = 404 + zoom * 78;
   const barrelInnerX = frontX - frontRadiusX - 6;
   const barrelInnerRightX = Math.max(middleX + middleRadiusX + 18, rearX + rearRadiusX + 10);
+  const sensorPlaneHeightPx = clamp((metrics.sensorHeightMm / SENSOR_FORMAT_MAX_HEIGHT_MM) * barrelInnerHeight, 14, barrelInnerHeight);
+  const sensorPlaneHalfHeight = sensorPlaneHeightPx / 2;
+  const sensorPlaneTopY = centerY - sensorPlaneHalfHeight;
+  const sensorPlaneBottomY = centerY + sensorPlaneHalfHeight;
   const visualSensorWidthRatio = clamp(metrics.sensorWidthMm / 36, 0.35, 1.22);
   const sceneHalfHeight = (82 - zoom * 52) * visualSensorWidthRatio;
   const frontHalfHeight = 48 - zoom * 4;
@@ -1214,7 +1265,6 @@ function updateZoomDemo(metrics) {
   const projectedSensorHalfHeight = clamp(rearHalfHeight + rearExitSlope * (sensorX - rearX), 12, 96);
   const projectedSensorTopY = centerY - projectedSensorHalfHeight;
   const projectedSensorBottomY = centerY + projectedSensorHalfHeight;
-  const sensorPlaneHeightPx = sensorPlaneBottomY - sensorPlaneTopY;
   const probeBlurCapMm = MAX_ALLOWED_ZOOM_PROBE_BLUR_MM > metrics.sensorHeightMm
     ? metrics.sensorHeightMm
     : Number.POSITIVE_INFINITY;
@@ -1286,6 +1336,7 @@ function updateZoomDemo(metrics) {
   elements.zoomSensorPlane.setAttribute("y1", sensorPlaneTopY.toFixed(1));
   elements.zoomSensorPlane.setAttribute("y2", sensorPlaneBottomY.toFixed(1));
   elements.zoomSensorLabel.setAttribute("x", (sensorX + 8).toFixed(1));
+  elements.zoomSensorLabel.setAttribute("y", (sensorPlaneTopY + 7).toFixed(1));
   elements.zoomSensorDistanceGuideStart.setAttribute("x1", lensPlaneX.toFixed(1));
   elements.zoomSensorDistanceGuideStart.setAttribute("x2", lensPlaneX.toFixed(1));
   elements.zoomSensorDistanceGuideEnd.setAttribute("x1", sensorX.toFixed(1));
@@ -1399,13 +1450,28 @@ function updateScenePreview(metrics) {
   const foregroundBlurMm = blurDiameterMm(metrics.focalLengthMm, metrics.fNumber, metrics.focusDistanceMm, scene.foregroundDistance * 1000);
   const subjectBlurMm = blurDiameterMm(metrics.focalLengthMm, metrics.fNumber, metrics.focusDistanceMm, scene.subjectDistance * 1000);
   const backgroundBlurMm = blurDiameterMm(metrics.focalLengthMm, metrics.fNumber, metrics.focusDistanceMm, scene.backgroundDistance * 1000);
-  const imageBrightness = sceneImageBrightness(metrics.fNumber, metrics.shutterSpeedSeconds, metrics.iso);
+  const sceneBrightness = sceneImageBrightness(
+    SCENE_IMAGE_BRIGHTNESS_REFERENCE_F_NUMBER,
+    SCENE_IMAGE_BRIGHTNESS_REFERENCE_SHUTTER_SECONDS,
+    SCENE_IMAGE_BRIGHTNESS_REFERENCE_ISO,
+    displayState.sceneBrightnessEv,
+    displayState.sceneDynamicRangeStops,
+  );
+  const imageBrightness = sceneImageBrightness(
+    metrics.fNumber,
+    metrics.shutterSpeedSeconds,
+    metrics.iso,
+    displayState.sceneBrightnessEv,
+    displayState.sceneDynamicRangeStops,
+  );
+  const imageContrast = sceneImageContrast(displayState.sceneDynamicRangeStops);
   const imageGrainAmount = sceneImageGrainAmount(metrics.iso);
 
   setSceneLayerDepth(elements.sceneBackgroundLayer, previewBlurPixels(backgroundBlurMm, metrics.cocMm), 1);
   setSceneLayerDepth(elements.sceneSubjectLayer, previewBlurPixels(subjectBlurMm, metrics.cocMm), 1);
   setSceneLayerDepth(elements.sceneForegroundLayer, previewBlurPixels(foregroundBlurMm, metrics.cocMm), 1.02);
-  elements.scenePreview.style.filter = `brightness(${imageBrightness.toFixed(3)})`;
+  elements.scenePreviewReference.style.filter = `brightness(${sceneBrightness.toFixed(3)}) contrast(${imageContrast.toFixed(3)})`;
+  elements.scenePreview.style.filter = `brightness(${imageBrightness.toFixed(3)}) contrast(${imageContrast.toFixed(3)})`;
   if (elements.sceneImageGrainOverlay) {
     elements.sceneImageGrainOverlay.style.opacity = (imageGrainAmount * 0.38).toFixed(3);
   }
@@ -1495,12 +1561,14 @@ function updateHelpText(metrics, sceneMetrics) {
   setHelp(helpTargets.transparencyGroup, helpText("Window transparency.", `Current transparency: ${displayState.transparency.toFixed(0)}%.`, "Adjusts panel alpha without changing any optics math."));
   setHelp(helpTargets.contentWidthGroup, helpText("Content width.", `Current max width: ${formatPixels(displayState.width)}.`, "Widens or narrows the overall page layout."));
   setHelp(helpTargets.blurGroup, helpText("Glass blur.", `Current backdrop blur: ${formatPixels(displayState.blur)}.`, "Controls the frosted-glass blur behind cards and the menu."));
+  setHelp(helpTargets.sceneBrightnessGroup, helpText("Baseline scene brightness.", `Current scene bias: ${formatExposureCompensation(displayState.sceneBrightnessEv)}.`, "Shifts both the scene and image previews brighter or darker, while aperture, shutter speed, and ISO still add extra exposure only to the image preview."));
+  setHelp(helpTargets.sceneDynamicRangeGroup, helpText("Baseline scene dynamic range.", `Current dynamic range: ${formatDynamicRangeStops(displayState.sceneDynamicRangeStops)}.`, "Higher values flatten tone response in both previews and preserve more shadow/highlight detail; lower values make them look punchier and clip sooner."));
   setHelp(helpTargets.halfAngleVibranceGroup, helpText("Half-angle vibrance.", `Current vibrance: ${displayState.halfAngleVibrance.toFixed(0)}%.`, "Boosts or softens the teal half-angle ray in the zoom illustration without changing the optics math."));
   setHelp(helpTargets.showOrangeLinesGroup, helpText("Orange ray overlay.", `Currently ${displayState.showOrangeLines ? "shown" : "hidden"}.`, "Toggles the amber boundary rays in the zoom illustration without affecting the field cone or optics math."));
   setHelp(helpTargets.magnificationChartToggleGroup, helpText("Magnification graph visibility.", `Currently ${displayState.showMagnificationChart ? "shown" : "hidden"}.`, "Hides or reveals the magnification-vs-distance chart and lets the remaining panels reflow."));
   setHelp(helpTargets.imageChartToggleGroup, helpText("Image-vs-subject graph visibility.", `Currently ${displayState.showImageChart ? "shown" : "hidden"}.`, "Hides or reveals the image-distance chart and lets the remaining panels reflow."));
   setHelp(helpTargets.blurChartToggleGroup, helpText("Depth-of-field graph visibility.", `Currently ${displayState.showBlurChart ? "shown" : "hidden"}.`, "Hides or reveals the blur/depth-of-field chart and lets the remaining panels reflow."));
-  setHelp(helpTargets.sensorSizeGroup, helpText("Sensor size.", `Current format: ${metrics.sensorFormatName} (${formatSensorSizeCentimeters(sensorFormatByKey(metrics.sensorFormatKey))}).`, "The field-of-view slice uses the current sensor width while the rest of the thin-lens math stays unchanged."));
+  setHelp(helpTargets.sensorSizeGroup, helpText("Sensor size.", `Current format: ${metrics.sensorFormatName} (${formatSensorSizeCentimeters(sensorFormatByKey(metrics.sensorFormatKey))}).`, "The field-of-view slice uses the current sensor width, and the sensor line in the moving-lens illustration scales with the current sensor height."));
   setHelp(helpTargets.radiusGroup, helpText("Corner radius.", `Current shared radius: ${formatPixels(displayState.radius)}.`, "Applies the same rounding to cards, bars, and the drawer."));
   setHelp(helpTargets.sceneForegroundGroup, helpText("Scene foreground distance.", `Current foreground plane = ${formatDistanceMeters(sceneMetrics.foregroundDistance)}.`, "This adjusts the foreground layer in the scene comparison only."));
   setHelp(helpTargets.sceneBackgroundGroup, helpText("Scene background distance.", `Current background plane = ${formatDistanceMeters(sceneMetrics.backgroundDistance)}.`, "This adjusts the background layer in the scene comparison only."));
@@ -1510,7 +1578,7 @@ function updateHelpText(metrics, sceneMetrics) {
   setHelp(helpTargets.isoControl, helpText("ISO sensitivity.", `Current ISO = ${formatIso(metrics.iso)}.`, exposureEquation, "Higher ISO brightens the exposure balance numerically, but usually increases image noise in a real camera."));
   setHelp(helpTargets.sensorDistanceControl, helpText("Sensor distance s'.", `Current s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, focusEquation, `Close-focus travel is capped around ${formatRatioMagnitude(MAX_PRACTICAL_FOCUS_MAGNIFICATION)} magnification so s' stays in a practical range.`, "This image-plane distance is locked to the focus distance by the thin-lens equation."));
   setHelp(helpTargets.focusDistanceControl, helpText("Focus distance s.", `Current s = ${formatDistanceMeters(metrics.focusDistanceMeters)}.`, focusEquation, `Minimum focus rises with focal length to keep close-focus magnification around ${formatRatioMagnitude(MAX_PRACTICAL_FOCUS_MAGNIFICATION)} or lower.`, "Subject distance is measured from the lens plane in this thin-lens model."));
-  setHelp(helpTargets.fNumberControl, helpText("F-number N.", `Current N = ${formatFNumber(metrics.fNumber)}.`, `Aperture diameter D = f / N = ${formatMillimeters(metrics.apertureDiameterMm)}.`, `Exposure multiplier vs ${formatFNumber(EXPOSURE_REFERENCE_F_NUMBER)} = ${formatScaleRatio(relativeLightTransmission(metrics.fNumber, EXPOSURE_REFERENCE_F_NUMBER))}.`, "Smaller N means a wider opening and usually shallower depth of field."));
+  setHelp(helpTargets.fNumberControl, helpText("F-number N.", `Current N = ${formatFNumber(metrics.fNumber)}.`, `Aperture diameter D = f / N = ${formatMillimeters(metrics.apertureDiameterMm)}.`, `Exposure = ${formatScaleRatio(relativeLightTransmission(metrics.fNumber, EXPOSURE_REFERENCE_F_NUMBER))} ${formatFNumber(EXPOSURE_REFERENCE_F_NUMBER)}.`, "Smaller N means a wider opening and usually shallower depth of field."));
   setHelp(helpTargets.cocControl, helpText("Circle of confusion (CoC).", `Current CoC = ${formatMillimeters(metrics.cocMm)}.`, "Depth of field is the span where the blur circle stays at or below this limit.", hyperfocalEquation));
   setHelp(helpTargets.probeDistanceControl, helpText("Probe distance z.", `Current z = ${formatDistanceMeters(metrics.probeDistanceMeters)}.`, `z' = f z / (z - f) = ${probeImageText}.`, `Probe blur c(z) = D |s'_focus - z'| / z' = ${formatMillimeters(metrics.probeBlurMm)}.`));
   setHelp(helpTargets.exposureTriangleCard, helpText("Exposure triangle.", `Aperture = ${formatFNumber(metrics.fNumber)}, shutter = ${formatShutterSpeed(metrics.shutterSpeedSeconds)}, ISO = ${formatIso(metrics.iso)}.`, exposureEquation, "These three settings trade light-gathering against motion and noise without changing the thin-lens geometry."));
@@ -1528,7 +1596,7 @@ function updateHelpText(metrics, sceneMetrics) {
   setHelp(helpTargets.hyperfocalBar, helpText("Hyperfocal distance H.", "This is the focus distance that pushes the far DOF limit to Infinity.", hyperfocalEquation));
 
   setHelp([helpTargets.zoomDemoCard, elements.zoomLensDemo], helpText("Variable lens demo.", `Effective focal length is shown as ${formatMillimeters(metrics.focalLengthMm)}.`, `Sensor format is ${metrics.sensorFormatName} (${formatSensorSizeCentimeters(sensorFormatByKey(metrics.sensorFormatKey))}).`, `The moving sensor plane and dimension line show s' = ${formatMillimeters(metrics.sensorDistanceMm)}.`, "The outer amber rays bend at each lens group, pass through the iris poles, and only their post-iris segments dim as N closes down.", "The field cone lands on the current probe-blur disc, while the teal span still shows projected image height at the sensor plane.", `The amber ring marks the CoC threshold c = ${formatMillimeters(metrics.cocMm)} and the filled disc shows the current probe blur.`, "Both circles now use the same sensor-relative linear scale, and they cap at the illustrated sensor height when the full allowed blur range would exceed it.", "Approximate field slice: 2 * atan(sensor_half / f)."));
-  setHelp([helpTargets.sceneCard, elements.scenePreview], helpText("Scene and image comparison.", "Left panel shows the scene view; right panel shows the resulting image.", `Foreground plane is around ${formatDistanceMeters(sceneMetrics.foregroundDistance)} with blur ${formatMillimeters(sceneMetrics.foregroundBlurMm)}.`, `Subject plane follows z = ${formatDistanceMeters(sceneMetrics.subjectDistance)} with blur ${formatMillimeters(sceneMetrics.subjectBlurMm)}.`, `Background plane is around ${formatDistanceMeters(sceneMetrics.backgroundDistance)} with blur ${formatMillimeters(sceneMetrics.backgroundBlurMm)}.`, `Aperture, shutter speed, and ISO all brighten or darken the image panel, with visible grain beginning above ISO ${formatIso(SCENE_IMAGE_GRAIN_START_ISO)}.`, "The scene view uses left, center, and right thirds for foreground, subject, and background selection; drag up or down within a third to change its distance.", "Each layer uses the current thin-lens blur from the live f, N, s, z, and CoC settings."));
+  setHelp([helpTargets.sceneCard, elements.scenePreview], helpText("Scene and image comparison.", "Left panel shows the scene view; right panel shows the resulting image.", `Foreground plane is around ${formatDistanceMeters(sceneMetrics.foregroundDistance)} with blur ${formatMillimeters(sceneMetrics.foregroundBlurMm)}.`, `Subject plane follows z = ${formatDistanceMeters(sceneMetrics.subjectDistance)} with blur ${formatMillimeters(sceneMetrics.subjectBlurMm)}.`, `Background plane is around ${formatDistanceMeters(sceneMetrics.backgroundDistance)} with blur ${formatMillimeters(sceneMetrics.backgroundBlurMm)}.`, `Aperture, shutter speed, and ISO only add extra brightness to the image panel, with visible grain beginning above ISO ${formatIso(SCENE_IMAGE_GRAIN_START_ISO)}.`, `Menu controls set a shared baseline scene bias of ${formatExposureCompensation(displayState.sceneBrightnessEv)} and a shared baseline dynamic range of ${formatDynamicRangeStops(displayState.sceneDynamicRangeStops)} for both panels.`, "The scene view uses left, center, and right thirds for foreground, subject, and background selection; drag up or down within a third to change its distance.", "Each layer uses the current thin-lens blur from the live f, N, s, z, and CoC settings."));
   setHelp([helpTargets.imageChartCard, elements.imageChart], helpText("Image distance chart.", "Y-axis equation: s' = f s / (s - f).", "The focus marker shows the currently selected subject distance s."));
   setHelp([helpTargets.magnificationChartCard, elements.magnificationChart], helpText("Magnification chart.", "Y-axis equation: |m| = |-s' / s|.", "The bar values keep the sign, but the plot shows magnitude only."));
   setHelp([helpTargets.blurChartCard, elements.blurChart], helpText("Blur and depth-of-field chart.", "Blur equation: c(z) = D |s'_focus - z'| / z', with z' = f z / (z - f).", "The shaded region is where c(z) <= CoC.", `Current CoC threshold: ${formatMillimeters(metrics.cocMm)}.`));
@@ -1560,6 +1628,14 @@ function loadDisplaySettings() {
     displayState.transparency = quantize(clamp(safeNumber(stored.transparency, DISPLAY_DEFAULTS.transparency), 0, 60));
     displayState.width = quantize(clamp(safeNumber(stored.width, DISPLAY_DEFAULTS.width), 960, 1600), 20);
     displayState.blur = quantize(clamp(safeNumber(stored.blur, DISPLAY_DEFAULTS.blur), 0, 28));
+    displayState.sceneBrightnessEv = quantize(
+      clamp(safeNumber(stored.sceneBrightnessEv, DISPLAY_DEFAULTS.sceneBrightnessEv), SCENE_BASELINE_BRIGHTNESS_MIN_EV, SCENE_BASELINE_BRIGHTNESS_MAX_EV),
+      0.25,
+    );
+    displayState.sceneDynamicRangeStops = quantize(
+      clamp(safeNumber(stored.sceneDynamicRangeStops, DISPLAY_DEFAULTS.sceneDynamicRangeStops), SCENE_DYNAMIC_RANGE_MIN_STOPS, SCENE_DYNAMIC_RANGE_MAX_STOPS),
+      0.5,
+    );
     displayState.halfAngleVibrance = quantize(clamp(safeNumber(stored.halfAngleVibrance, DISPLAY_DEFAULTS.halfAngleVibrance), 40, 320), 5);
     displayState.radius = quantize(clamp(safeNumber(stored.radius, DISPLAY_DEFAULTS.radius), 18, 34));
     displayState.foregroundDistance = clamp(safeNumber(stored.foregroundDistance, DISPLAY_DEFAULTS.foregroundDistance), DISTANCE_FLOOR_METERS, DISTANCE_MAX_METERS);
@@ -1636,6 +1712,14 @@ function syncDisplayControls() {
   elements.contentWidthDisplay.textContent = formatPixels(displayState.width);
   elements.blurStrengthRange.value = displayState.blur.toFixed(0);
   elements.blurStrengthDisplay.textContent = formatPixels(displayState.blur);
+  if (elements.sceneBrightnessRange && elements.sceneBrightnessDisplay) {
+    elements.sceneBrightnessRange.value = displayState.sceneBrightnessEv.toFixed(2);
+    elements.sceneBrightnessDisplay.textContent = formatExposureCompensation(displayState.sceneBrightnessEv);
+  }
+  if (elements.sceneDynamicRangeRange && elements.sceneDynamicRangeDisplay) {
+    elements.sceneDynamicRangeRange.value = displayState.sceneDynamicRangeStops.toFixed(1);
+    elements.sceneDynamicRangeDisplay.textContent = formatDynamicRangeStops(displayState.sceneDynamicRangeStops);
+  }
   if (elements.halfAngleVibranceRange && elements.halfAngleVibranceDisplay) {
     elements.halfAngleVibranceRange.value = displayState.halfAngleVibrance.toFixed(0);
     elements.halfAngleVibranceDisplay.textContent = `${displayState.halfAngleVibrance.toFixed(0)}%`;
@@ -1774,7 +1858,7 @@ function syncControls() {
   elements.fNumberRange.value = unmapLogSlider(state.fNumber, F_NUMBER_MIN, F_NUMBER_MAX).toFixed(0);
   elements.fNumberNumber.value = state.fNumber.toFixed(1);
   elements.fNumberDisplay.textContent = formatFNumber(state.fNumber);
-  elements.fNumberLightLoss.textContent = `exposure multiplier: ${formatScaleRatio(relativeLightTransmission(state.fNumber, EXPOSURE_REFERENCE_F_NUMBER))} vs ${formatFNumber(EXPOSURE_REFERENCE_F_NUMBER)}`;
+  elements.fNumberLightLoss.innerHTML = `exposure = <em>${formatScaleRatioValue(relativeLightTransmission(state.fNumber, EXPOSURE_REFERENCE_F_NUMBER))}</em>x ${formatFNumber(EXPOSURE_REFERENCE_F_NUMBER)}`;
   elements.cocRange.value = unmapLogSlider(state.coc, COC_MIN_MM, COC_MAX_MM).toFixed(0);
   if (elements.cocNumber) {
     elements.cocNumber.value = state.coc.toFixed(3);
@@ -2132,8 +2216,13 @@ elements.presetButtons.forEach((button) => {
     }
     selectedPresetKey = button.dataset.preset;
     Object.assign(state, preset);
+    setPresetSidebarOpen(false);
     render();
   });
+});
+
+elements.presetSidebarTab?.addEventListener("click", () => {
+  setPresetSidebarOpen(!isPresetSidebarOpen());
 });
 
 elements.displayMenuToggle.addEventListener("click", () => {
@@ -2194,6 +2283,8 @@ elements.showBlurChartToggle.addEventListener("change", () => {
 bindDisplayRange(elements.transparencyRange, "transparency", 0, 60);
 bindDisplayRange(elements.contentWidthRange, "width", 960, 1600, 20);
 bindDisplayRange(elements.blurStrengthRange, "blur", 0, 28);
+bindDisplayRange(elements.sceneBrightnessRange, "sceneBrightnessEv", SCENE_BASELINE_BRIGHTNESS_MIN_EV, SCENE_BASELINE_BRIGHTNESS_MAX_EV, 0.25);
+bindDisplayRange(elements.sceneDynamicRangeRange, "sceneDynamicRangeStops", SCENE_DYNAMIC_RANGE_MIN_STOPS, SCENE_DYNAMIC_RANGE_MAX_STOPS, 0.5);
 bindDisplayRange(elements.halfAngleVibranceRange, "halfAngleVibrance", 40, 320, 5);
 bindDisplaySensorFormatRange(elements.sensorSizeRange);
 bindDisplayRange(elements.radiusRange, "radius", 18, 34);
@@ -2229,9 +2320,22 @@ elements.resetDisplayButton.addEventListener("click", () => {
 });
 
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && isPresetSidebarOpen()) {
+    setPresetSidebarOpen(false);
+  }
   if (event.key === "Escape" && elements.displayDrawer.classList.contains("is-open")) {
     setDisplayMenuOpen(false, true);
   }
+});
+
+document.addEventListener("pointerdown", (event) => {
+  if (!isPresetSidebarOpen() || !elements.presetSidebarMenu) {
+    return;
+  }
+  if (elements.presetSidebarMenu.contains(event.target)) {
+    return;
+  }
+  setPresetSidebarOpen(false);
 });
 
 window.addEventListener("resize", scheduleRender);
